@@ -32,7 +32,8 @@ public:
                             double r2 = 2 * erand48(X), dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
                             utils::Vector3 d = cx * (((sx + .5 + dx) / 2 + x) / w - .5) +
                                                cy * (((sy + .5 + dy) / 2 + y) / h - .5) + cam.direction;
-                            r = r + basic_pt(*this, Ray(cam.origin + d * 140, d.normalize()), 0, X) * (1. / samps);
+                            d = d.normalize();
+                            r = r + basic_pt(*this, Ray(cam.origin + d * 140, d), 0, X) * (1. / samps);
                         }
                         c[i] = c[i] + r.clamp(0, 1) * .25;
                     }

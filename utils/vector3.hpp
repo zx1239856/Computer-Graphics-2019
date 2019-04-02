@@ -7,18 +7,18 @@ namespace utils {
         using FloatType = double;
         FloatType _x, _y, _z;
 
-        double clampHelper(double lo, double hi, double v) {
-            return v < lo ? lo : v > hi ? hi : v;
+        double clampHelper(FloatType lo, FloatType hi, FloatType v) {
+            return v < lo ? lo : (v > hi ? hi : v);
         }
 
     public:
-        Vector3(FloatType x = 0, FloatType y = 0, FloatType z = 0) : _x(x), _y(y), _z(z) {}
+        explicit Vector3(FloatType x = 0, FloatType y = 0, FloatType z = 0) : _x(x), _y(y), _z(z) {}
 
-        double x() const { return _x; }
+        FloatType x() const { return _x; }
 
-        double y() const { return _y; }
+        FloatType y() const { return _y; }
 
-        double z() const { return _z; }
+        FloatType z() const { return _z; }
 
         Vector3 mult(const Vector3 &other) const { return Vector3(_x * other._x, _y * other._y, _z * other._z); }
 
@@ -33,6 +33,8 @@ namespace utils {
         Vector3 operator-(FloatType v) const { return Vector3(_x - v, _y - v, _z - v); }
 
         Vector3 operator*(FloatType v) const { return Vector3(_x * v, _y * v, _z * v); }
+
+        Vector3 operator*(const Vector3 &other) { return Vector3(_x* other._x, _y * other._y, _z * other._z); }
 
         Vector3 operator/(FloatType v) const { return Vector3(_x / v, _y / v, _z / v); }
 
@@ -76,7 +78,7 @@ namespace utils {
             return ((*this) * n_ir + n * (-n_ir * cosi + cosr)).normalize();
         }
 
-        Vector3 clamp(double lo, double hi) {
+        Vector3 clamp(FloatType lo, FloatType hi) {
             return Vector3(clampHelper(lo, hi, this->_x), clampHelper(lo, hi, this->_y), clampHelper(lo, hi, this->_z));
         }
     };

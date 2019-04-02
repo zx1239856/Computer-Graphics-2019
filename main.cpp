@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "utils/scene.hpp"
 
 double clamp(double r)
@@ -7,8 +8,10 @@ double clamp(double r)
 }
 inline int toInt(double x){ return int(pow(clamp(x),1/2.2)*255+.5); }
 
-int main() {
+int main(int argc, char **argv) {
     using namespace utils;
+    if(argc != 2)
+        return 0;
     Scene scene;
     scene.addObject(new Sphere(Vector3(1e5+1, 40.8, 81.6), 1e5, Vector3(.75,.25,.25), Vector3(), DIFF, 1.5));
     scene.addObject(new Sphere(Vector3(-1e5+99, 40.8, 81.6), 1e5, Vector3(.25,.25,.75), Vector3(), DIFF, 1.5));
@@ -20,8 +23,8 @@ int main() {
     scene.addObject(new Sphere(Vector3(73,16.5,78), 16.5, Vector3(1, 1, 1) * .999, Vector3(), REFR, 1.5));
     scene.addObject(new Sphere(Vector3(50,681.6-.27,81.6), 600, Vector3(), Vector3(12,12,12), DIFF, 1.5));
     Camera cam(Vector3(50, 52, 295.6), Vector3(0, -0.042612, -1).normalize());
-    int w= 1920, h = 1080;
-    auto res = scene.render(cam, 1300, w, h);
+    int w= 1024, h = 768;
+    auto res = scene.render(cam, atoi(argv[1])/4 , w, h);
     FILE *f = fopen("image.ppm", "w");
     fprintf(f, "P3\n%d %d\n%d\n", w, h, 255);
     for(int i = 0; i < w*h; ++i)

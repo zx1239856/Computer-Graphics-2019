@@ -7,7 +7,7 @@ utils::Vector3 basic_pt(const Scene &scene, const Ray &ray, int depth, unsigned 
     std::pair<int, double> intersect = scene.findFirstIntersect(ray);
     if (intersect.first == -1)
         return utils::Vector3(); // no intersection
-    BasicObject *obj = scene.object(intersect.second);
+    BasicObject *obj = scene.object(intersect.first);
     bool into = false;
     utils::Vector3 x = ray.getVector(intersect.second), n = obj->norm(x), nl =
             n.dot(ray.direction) < 0 ? into = true, n : -n;

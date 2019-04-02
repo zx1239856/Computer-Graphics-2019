@@ -44,7 +44,7 @@ public:
             BasicObject(_color, _emission, _refl, _brdf), origin(o), radius(r) {}
     virtual std::pair<utils::Vector3, double> intersect(const Ray &ray) const override
     {
-        auto op = origin - ray.origin;
+        utils::Vector3 op = origin - ray.origin;
         double b = op.dot(ray.direction);
         double d = b * b - op.len2() + radius * radius;
         if(d < 0)
@@ -52,7 +52,9 @@ public:
         else
         {
             d = std::sqrt(d);
-            double t = (b - d > epsilon) ? b - d : ((b + d) > epsilon ? b + d : 0);
+            double t = (b - d > epsilon) ? b - d : ((b + d) > epsilon ? b + d : -1);
+            if(t < 0)
+                return {utils::Vector3(), INF};
             return {ray.getVector(t), t};
         }
     }
