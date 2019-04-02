@@ -1,6 +1,8 @@
-#pragma once
+#ifndef _VECTOR_3_HPP
+#define _VECTOR_3_HPP
 
 #include <cmath>
+#include <algorithm>
 
 namespace utils {
     class Vector3 {
@@ -34,7 +36,7 @@ namespace utils {
 
         Vector3 operator*(FloatType v) const { return Vector3(_x * v, _y * v, _z * v); }
 
-        Vector3 operator*(const Vector3 &other) { return Vector3(_x* other._x, _y * other._y, _z * other._z); }
+        Vector3 operator*(const Vector3 &other) { return Vector3(_x * other._x, _y * other._y, _z * other._z); }
 
         Vector3 operator/(FloatType v) const { return Vector3(_x / v, _y / v, _z / v); }
 
@@ -81,5 +83,19 @@ namespace utils {
         Vector3 clamp(FloatType lo, FloatType hi) {
             return Vector3(clampHelper(lo, hi, this->_x), clampHelper(lo, hi, this->_y), clampHelper(lo, hi, this->_z));
         }
+
+        friend Vector3 min(const Vector3 &a, const Vector3 &b);
+
+        friend Vector3 max(const Vector3 &a, const Vector3 &b);
     };
+
+    inline Vector3 min(const Vector3 &a, const Vector3 &b) {
+        return Vector3(std::min(a._x, b._x), std::min(a._y, b._y), std::min(a._z, b._z));
+    }
+
+    inline Vector3 max(const Vector3 &a, const Vector3 &b) {
+        return Vector3(std::max(a._x, b._x), std::max(a._y, b._y), std::max(a._z, b._z));
+    }
 }
+
+#endif

@@ -9,6 +9,10 @@ if(OPENMP_FOUND)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
+if(BUILD_CUDA)
+    message("Build with cuda support")
+endif()
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_BUILD_TYPE release)
 set(EXEC_FILES main.cpp utils/vector3.hpp utils/bezier.hpp utils/object.hpp utils/ray.hpp utils/scene.hpp utils/camera.hpp utils/renderer.cpp)

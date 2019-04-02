@@ -20,7 +20,7 @@ public:
 
     std::vector<utils::Vector3> render(const Camera &cam, int samps, int w, int h) const {
         std::vector<utils::Vector3> c(w * h);
-        utils::Vector3 cx = utils::Vector3(w * .5135 / h), cy = cx.cross(cam.direction).normalize() * .5135, r;
+        utils::Vector3 cx = utils::Vector3(w * .4135 / h), cy = cx.cross(cam.direction).normalize() * .4135, r;
 #pragma omp parallel for schedule(dynamic, 1) private(r)
         for (int y = 0; y < h; ++y) { // rows
             fprintf(stderr, "\rRendering (%d spp) %5.2f%%", samps * 4, 100. * y / (h - 1));
@@ -33,7 +33,7 @@ public:
                             utils::Vector3 d = cx * (((sx + .5 + dx) / 2 + x) / w - .5) +
                                                cy * (((sy + .5 + dy) / 2 + y) / h - .5) + cam.direction;
                             d = d.normalize();
-                            r = r + basic_pt(*this, Ray(cam.origin + d * 140, d), 0, X) * (1. / samps);
+                            r = r + basic_pt(*this, Ray(cam.origin, d), 0, X) * (1. / samps);
                         }
                         c[i] = c[i] + r.clamp(0, 1) * .25;
                     }
