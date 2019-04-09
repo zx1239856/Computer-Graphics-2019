@@ -6,6 +6,7 @@
 #include "common.h"
 #include "vector3.hpp"
 #include "ray.hpp"
+#include "bezier.hpp"
 
 class Texture {
 public:
@@ -165,5 +166,31 @@ public:
             return utils::Vector3(0, abs(vec.y() - p0.y()) < epsilon ? -1 : 1, 0);
         if (abs(vec.z() - p0.z()) < epsilon || abs(vec.z() - p1.z()) < epsilon)
             return utils::Vector3(0, 0, abs(vec.z() - p0.z()) < epsilon ? -1 : 1);
+    }
+};
+
+class RotaryBezier : public BasicObject {
+    utils::Vector3 axis;
+    utils::Bezier2D bezier;
+    // rotate bezier2d curve along y-axis (in the direction of axis vector)
+public:
+    RotaryBezier(const utils::Vector3 &_axis, const utils::Bezier2D &_bezier, const Texture &t) :
+            BasicObject(t), axis(_axis), bezier(_bezier) {}
+
+    RotaryBezier(const utils::Vector3 &_axis, const utils::Bezier2D &_bezier, const utils::Vector3 &color,
+                 const utils::Vector3 &emission,
+                 Refl_t refl, double brdf) :
+            BasicObject(color, emission, refl, brdf), axis(_axis), bezier(_bezier) {}
+
+    virtual std::pair<utils::Vector3, double> intersect(const Ray &ray) const override {
+
+    }
+
+    virtual std::pair<utils::Vector3, utils::Vector3> boundingBox() const override {
+
+    }
+
+    virtual utils::Vector3 norm(const utils::Vector3 &vec) const override {
+
     }
 };
