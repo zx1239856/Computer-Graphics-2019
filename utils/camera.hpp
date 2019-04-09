@@ -51,7 +51,8 @@ public:
                             double r2 = 2 * erand48(X), dy = r2 < 1 ? sqrt(r2) : 2 - sqrt(2 - r2);
                             utils::Vector3 d = cx * (((sx + .5 + dx) / 2 + u) / w - .5) +
                                                cy * (((sy + .5 + dy) / 2 + v) / h - .5) + direction;
-                            utils::Vector3 hit = origin + d * focal_dist;  // real hit point on focal plane
+                            double cos = d.normalize().dot(direction.normalize());
+                            utils::Vector3 hit = origin + d * focal_dist / cos;  // real hit point on focal plane
                             utils::Vector3 p_origin = origin + (utils::Vector3(erand48(X) * 1.01,erand48(X)) - .5) * 2 * aperture; // origin perturbation
                             d = d.normalize();
                             r = r + basic_pt(*scene, Ray(p_origin, (hit - p_origin).normalize()), 0, X) * (1. / samps);
