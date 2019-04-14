@@ -37,14 +37,20 @@ public:
         std::vector<utils::Vector3> c(w * h);
         if (scene == nullptr)
             return c;
-        utils::Vector3 cx = utils::Vector3(w * fov / h), cy = cx.cross(direction).normalize() * fov, r;
+        utils::Vector3 cx = utils::Vector3(-direction.z(), 0, direction.x());
+        if (cx.len2() < epsilon) {
+            cx = utils::Vector3(1, 0, 0) * w / h * fov;  // camera pointing towards y-axis
+        } else cx = cx.normalize() * w / h * fov;
+        utils::Vector3 cy = cx.cross(direction).normalize() * fov, r;
+        // cx = direction \times \cap{y}, cy = cx \times direction
 #pragma omp parallel for schedule(dynamic, 1) private(r)
         for (int v = 0; v < h; ++v) {
             fprintf(stderr, "\rRendering (%d spp) %5.2f%%", samps * 4, 100. * v / (h - 1));
             for (int u = 0; u < w; ++u) {
                 for (int sy = 0; sy < 2; ++sy) {  // 2x2 super sampling
-                    for(int sx = 0; sx < 2; ++sx) {
-                        ushort X[3] = {static_cast<ushort>(v + sx), static_cast<ushort>(v * u + sy), static_cast<ushort>(v * u * v + sx * sy)};
+                    for (int sx = 0; sx < 2; ++sx) {
+                        ushort X[3] = {static_cast<ushort>(v + sx), static_cast<ushort>(v * u + sy),
+                                       static_cast<ushort>(v * u * v + sx * sy)};
                         r = utils::Vector3();
                         for (int s = 0; s < samps; ++s) {
                             double r1 = 2 * erand48(X), dx = r1 < 1 ? sqrt(r1) : 2 - sqrt(2 - r1);
@@ -53,7 +59,9 @@ public:
                                                cy * (((sy + .5 + dy) / 2 + v) / h - .5) + direction;
                             double cos = d.normalize().dot(direction.normalize());
                             utils::Vector3 hit = origin + d * focal_dist / cos;  // real hit point on focal plane
-                            utils::Vector3 p_origin = origin + (utils::Vector3(erand48(X) * 1.01,erand48(X)) - .5) * 2 * aperture; // origin perturbation
+                            utils::Vector3 p_origin = origin +
+                                                      (utils::Vector3(erand48(X) * 1.01, erand48(X)) - .5) * 2 *
+                                                      aperture; // origin perturbation
                             d = d.normalize();
                             r = r + basic_pt(*scene, Ray(p_origin, (hit - p_origin).normalize()), 0, X) * (1. / samps);
                         }

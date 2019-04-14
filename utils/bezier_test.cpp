@@ -2,6 +2,7 @@
  * Created by zx on 19-4-3.
  */
 #include "bezier.hpp"
+#include "object.hpp"
 #include <opencv2/highgui.hpp>
 #include <opencv2/core.hpp>
 
@@ -30,14 +31,21 @@ int main()
     Bezier2D bezier(ctrl_pnts);
     cv::Mat image = cv::Mat(1000, 1000, CV_8UC3, cv::Scalar(0,0,0));
     for(const auto &p: ctrl_pnts)
-        setPixel(image, p.first, p.second, 255, 255, 255);
+        setPixel(image, p.x, p.y, 255, 255, 255);
     constexpr size_t sample = 1000;
     for(size_t i = 0; i < sample; ++i)
     {
         auto p = bezier.getPoint(static_cast<double>(i)/sample);
-        setPixel(image, cvRound(p.first), cvRound(p.second), 255, 255, 0);
+        setPixel(image, cvRound(p.x), cvRound(p.y), 255, 255, 0);
     }
     printf("xmin: %lf, xmax: %lf, ymin: %lf, ymax: %lf\n", bezier.xMin(), bezier.xMax(), bezier.yMin(), bezier.yMax());
     cv::imshow("Result", image);
     cv::waitKey(0);
+
+    ctrl_pnts = {{0.0, 0.01}, {8.3, 2.7}, {10.22, 6.62}, {0, 11.38}};
+    bezier = Bezier2D(ctrl_pnts);
+    auto bezier_3d = RotaryBezier(utils::Vector3(10, 0, 20), bezier, utils::Vector3(0,0,0), utils::Vector3(0,0,0), REFR, 0);
+    auto intersect = bezier_3d.intersect(Ray(utils::Vector3(25,9.3,20),utils::Vector3(-1, -0.21, 0.002).normalize()));
+    auto norm = bezier_3d.norm(utils::Vector3(), std::get<2>(intersect));
+    return 0;
 }

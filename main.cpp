@@ -15,21 +15,33 @@ int main(int argc, char **argv) {
         return 0;
     Scene scene;
     scene.addObject(new Plane(Vector3(-1, 0, 0), 1, Vector3(.75, .25, .25), Vector3(), DIFF, 1.5)); //left
-    scene.addObject(new Plane(Vector3(1, 0, 0), 99, Vector3(.25, .25, .75), Vector3(), DIFF, 1.5)); // right
+    scene.addObject(new Plane(Vector3(1, 0, 0), 399, Vector3(.25, .25, .75), Vector3(), DIFF, 1.5)); // right
     scene.addObject(new Plane(Vector3(0, 0, 1), 0, Vector3(.25, .75, .25), Vector3(), DIFF, 1.5)); // back
-    scene.addObject(new Cube(Vector3(80, 40, 0), Vector3(95, 35, 100), Vector3(.15, .35, .55), Vector3(), DIFF, 1.3));
+    scene.addObject(new Cube(Vector3(380, 40, 0), Vector3(395, 35, 100), Vector3(.15, .35, .55), Vector3(), DIFF, 1.3));
     //scene.addObject(new Sphere(Vector3(50,40.8,-1e5+170), 1e5, Vector3(), Vector3(), DIFF, 1.5)); //front
-    scene.addObject(new Sphere(Vector3(50, 1e5, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5)); //bottom
+    scene.addObject(new Sphere(Vector3(150, 1e5, 181.6), 1e5, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5)); //bottom
     scene.addObject(
-            new Sphere(Vector3(50, -1e5 + 81.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5)); //top
-    scene.addObject(new Sphere(Vector3(27, 16.5, 47), 16.5, Vector3(1, 1, 1) * .999, Vector3(), REFR, 1.5));
-    scene.addObject(new Sphere(Vector3(73, 16.5, 78), 16.5, Vector3(.9, .9, .5) * .999, Vector3(), REFR, 1.5));
+            new Sphere(Vector3(50, -1e5 + 381.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5)); //top
+    scene.addObject(new Sphere(Vector3(327, 16.5, 97), 16.5, Vector3(1, 1, 1) * .999, Vector3(), REFR, 1.5));
+    scene.addObject(new Sphere(Vector3(373, 16.5, 78), 16.5, Vector3(.9, .9, .5) * .999, Vector3(), REFR, 1.5));
     scene.addObject(new Sphere(Vector3(10, 0, 0), 10, Vector3(.75, .75, .15), Vector3(), DIFF, 1.5));
-    scene.addObject(new Sphere(Vector3(50, 681.6 - .27, 81.6), 600, Vector3(), Vector3(12, 12, 12), DIFF, 1.5));
+    scene.addObject(new Sphere(Vector3(150, 981.6 - .63, 181.6), 600, Vector3(), Vector3(33, 33, 22), DIFF, 1.5));
+    // bezier part
+    double xscale = 2, yscale = 2;
+    std::vector<Point2D> ctrl_pnts = {{20. / xscale, 0. / yscale},
+                                      {27. / xscale, 0. / yscale},
+                                      {30. / xscale, 10. / yscale},
+                                      {30. / xscale, 20. / yscale},
+                                      {30. / xscale, 30. / yscale},
+                                      {25. / xscale, 40. / yscale},
+                                      {20. / xscale, 60. / yscale},
+                                      {15. / xscale, 70. / yscale},
+                                      {30. / xscale, 80. / yscale}};
+    scene.addObject(new RotaryBezier(Vector3(297, 3, 197), ctrl_pnts, Vector3(.75, .25, .75), Vector3(), SPEC, 1.5));
     int w = 1920, h = 1080;
     Camera cam(w, h);
-    cam.setPosition(Vector3(50, 60, 395.6), Vector3(0, -0.042612, -0.4).normalize());
-    cam.setLensParam(0.4135, 10., 360);
+    cam.setPosition(Vector3(150, 30, 295.6), Vector3(0.35, -0.030612, -0.4).normalize());
+    cam.setLensParam(0.5135, 5., 310);
     cam.setScene(&scene);
     auto res = cam.renderPt(atoi(argv[1]) / 4);
     FILE *f = fopen("image.ppm", "w");

@@ -4,12 +4,12 @@
 
 utils::Vector3 basic_pt(const Scene &scene, const Ray &ray, int depth, unsigned short *X) {
     using namespace utils;
-    std::pair<int, double> intersect = scene.findFirstIntersect(ray);
-    if (intersect.first == -1)
+    auto intersect = scene.findFirstIntersect(ray);
+    if (std::get<0>(intersect) == -1)
         return utils::Vector3(); // no intersection
-    BasicObject *obj = scene.object(intersect.first);
+    BasicObject *obj = scene.object(std::get<0>(intersect));
     bool into = false;
-    utils::Vector3 x = ray.getVector(intersect.second), n = obj->norm(x), nl =
+    utils::Vector3 x = ray.getVector(std::get<1>(intersect)), n = obj->norm(x, std::get<2>(intersect)), nl =
             n.dot(ray.direction) < 0 ? into = true, n : -n;
     Texture texture = obj->getTexture();
     utils::Vector3 f = texture.color;
