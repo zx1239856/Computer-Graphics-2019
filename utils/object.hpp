@@ -256,8 +256,9 @@ public:
             if (err <= EPSILON) // already accurate enough
             {
                 auto pnt = ray.getVector(t);
-                printf("(%lf, %lf, %lf)\n", pnt.x(), pnt.y(), pnt.z());
-                return {pnt, t, Point2D(t_, std::atan2(pnt.z() - axis.z(), pnt.x() - axis.x()) + M_PI)};
+                //printf("(%lf, %lf, %lf)\n", pnt.x(), pnt.y(), pnt.z());
+                double phi = std::atan2(pnt.z() - axis.z(), pnt.x() - axis.x());
+                return {pnt, t, Point2D(t_,  phi < 0 ? phi + PI_DOUBLED : phi)};
             } else {
                 // second iteration
                 t_ = horiz_ray_solver(ray.getVector(t).y() - axis.y());
@@ -269,8 +270,9 @@ public:
                     return {utils::Vector3(), INF, Point2D(0, 0)};
                 else {
                     auto pnt = ray.getVector(t);
-                    printf("(%lf, %lf, %lf)\n", pnt.x(), pnt.y(), pnt.z());
-                    return {pnt, t, Point2D(t_, std::atan2(pnt.z() - axis.z(), pnt.x() - axis.x()) + M_PI)};
+                    //printf("(%lf, %lf, %lf)\n", pnt.x(), pnt.y(), pnt.z());
+                    double phi = std::atan2(pnt.z() - axis.z(), pnt.x() - axis.x());
+                    return {pnt, t, Point2D(t_,  phi < 0 ? phi + PI_DOUBLED : phi)};
                 }
             }
         } else // not parallel to x-z plane
@@ -353,7 +355,7 @@ public:
             auto hit = ray.getVector(final_t);
 
             double phi = std::atan2(hit.z() - axis.z(), hit.x() - axis.x());
-            return {hit, final_t, Point2D(final_t_, phi < 0 ? phi + M_PI_2 : phi)};
+            return {hit, final_t, Point2D(final_t_, phi < 0 ? phi + PI_DOUBLED : phi)};
         }
     }
 
