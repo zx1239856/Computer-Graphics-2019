@@ -42,9 +42,17 @@ int main()
     cv::imshow("Result", image);
     cv::waitKey(0);
 
-    ctrl_pnts = {{0.0, 0.01}, {8.3, 2.7}, {10.22, 6.62}, {0, 11.38}};
-    bezier = Bezier2D(ctrl_pnts);
-    auto bezier_3d = RotaryBezier(utils::Vector3(10, 0, 20), bezier, utils::Vector3(0,0,0), utils::Vector3(0,0,0), REFR, 0);
+    double xscale = 2, yscale = 2;
+    ctrl_pnts = {{20. / xscale, 0. / yscale},
+                                      {27. / xscale, 0. / yscale},
+                                      {30. / xscale, 10. / yscale},
+                                      {30. / xscale, 20. / yscale},
+                                      {30. / xscale, 30. / yscale},
+                                      {25. / xscale, 40. / yscale},
+                                      {20. / xscale, 60. / yscale},
+                                      {15. / xscale, 70. / yscale},
+                                      {30. / xscale, 80. / yscale}};
+    auto bezier_3d = RotaryBezier(utils::Vector3(297, 3, 197), ctrl_pnts, utils::Vector3(.75, .25, .75), utils::Vector3(), DIFF, 1.5);
     auto intersect = bezier_3d.intersect(Ray(utils::Vector3(25,9.3,20),utils::Vector3(-1, -0.21, 0.002).normalize()));
     auto norm = bezier_3d.norm(utils::Vector3(), std::get<2>(intersect));
     return 0;

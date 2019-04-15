@@ -21,7 +21,7 @@ inline double intersectSphere(const Ray &ray, const utils::Vector3 &o, double r)
         return INF;
     else {
         d = std::sqrt(d);
-        double t = (b - d > epsilon) ? b - d : ((b + d) > epsilon ? b + d : -1);
+        double t = (b - d > EPSILON) ? b - d : ((b + d) > EPSILON ? b + d : -1);
         if (t < 0)
             return INF;
         return t;
@@ -130,7 +130,7 @@ public:
     }
 
     virtual utils::Vector3 norm(const utils::Vector3 &vec, const Point2D &unused = Point2D(0, 0)) const override {
-        assert(std::abs((vec - origin).len() - radius) < epsilon);
+        assert(std::abs((vec - origin).len() - radius) < EPSILON);
         return (vec - origin).normalize();
     }
 };
@@ -148,7 +148,7 @@ public:
     std::tuple<utils::Vector3, double, Point2D> intersect(const Ray &ray) const override {
         double prod = ray.direction.dot(n);
         double t = (d - n.dot(ray.origin)) / prod;
-        if (t < epsilon)
+        if (t < EPSILON)
             return {utils::Vector3(), INF, Point2D(0, 0)};
         return {ray.getVector(t), t, Point2D(0, 0)};  // TODO - USE PROJECTED COORD
     }
@@ -184,12 +184,12 @@ public:
     }
 
     virtual utils::Vector3 norm(const utils::Vector3 &vec, const Point2D &unused = Point2D(0, 0)) const override {
-        if (abs(vec.x() - p0.x()) < epsilon || abs(vec.x() - p1.x()) < epsilon)
-            return utils::Vector3(abs(vec.x() - p0.x()) < epsilon ? -1 : 1, 0, 0);
-        if (abs(vec.y() - p0.y()) < epsilon || abs(vec.y() - p1.y()) < epsilon)
-            return utils::Vector3(0, abs(vec.y() - p0.y()) < epsilon ? -1 : 1, 0);
-        if (abs(vec.z() - p0.z()) < epsilon || abs(vec.z() - p1.z()) < epsilon)
-            return utils::Vector3(0, 0, abs(vec.z() - p0.z()) < epsilon ? -1 : 1);
+        if (abs(vec.x() - p0.x()) < EPSILON || abs(vec.x() - p1.x()) < EPSILON)
+            return utils::Vector3(abs(vec.x() - p0.x()) < EPSILON ? -1 : 1, 0, 0);
+        if (abs(vec.y() - p0.y()) < EPSILON || abs(vec.y() - p1.y()) < EPSILON)
+            return utils::Vector3(0, abs(vec.y() - p0.y()) < EPSILON ? -1 : 1, 0);
+        if (abs(vec.z() - p0.z()) < EPSILON || abs(vec.z() - p1.z()) < EPSILON)
+            return utils::Vector3(0, 0, abs(vec.z() - p0.z()) < EPSILON ? -1 : 1);
     }
 };
 
@@ -201,35 +201,28 @@ class RotaryBezier : public BasicObject {
     double horiz_ray_solver(double y, size_t iter = 15) const {
         double t = .5, yt, dyt;
         for (size_t i = iter; i; --i) {
+            if (t < 0) t = EPSILON_2;
+            if (t > 1) t = 1 - EPSILON_2;
             yt = bezier.getPoint(t).y - y;
             dyt = bezier.getDerivative(t).y;
-            if (std::abs(yt) < epsilon)
+            if (std::abs(yt) < EPSILON_1)
                 return t;
             t -= yt / dyt;
         }
         return -1;
     }
 
-    double normal_ray_solver(const Ray &ray, double initial_val, size_t iter = 15) const {
+    double normal_ray_solver(double A, double B, double C, double initial_val, size_t iter = 15) const {
         double t = initial_val, gt, gyt;
-        // g(t) = [A(y(t)-y_0)+C]^2 - x^2(t) + D
-        double temp = ray.direction.x() * ray.direction.x() + ray.direction.z() * ray.direction.z();
-        double sqrt_temp = sqrt(temp);
-        double A = sqrt_temp / ray.direction.y();
-        double x0 = ray.origin.x() - axis.x(), z0 = ray.origin.z() - axis.z(), y0 = ray.origin.y() - axis.y();
-        double C = (x0 * ray.direction.x() + z0 * ray.direction.z()) / sqrt_temp;
-        double D =
-                (x0 * ray.direction.z() - z0 * ray.direction.x()) * (x0 * ray.direction.z() - z0 * ray.direction.x()) /
-                sqrt_temp;
         for (size_t i = iter; i; --i) {
-            if (t < 0) t = epsilon;
-            if (t > 1) t = 1 - epsilon;
+            if (t < 0) t = EPSILON_2;
+            if (t > 1) t = 1 - EPSILON_2;
             auto xy = bezier.getPoint(t);
             auto dxy = bezier.getDerivative(t);
-            double val = (A * (xy.y - y0) + C);
-            gt = val * val - xy.x * xy.x + D;
+            double val = (A * xy.y + B);
+            gt = val * val - xy.x * xy.x + C;
             gyt = 2 * val * A * dxy.y - 2 * xy.x * dxy.x;
-            if (std::abs(gt) < epsilon)
+            if (std::abs(gt) < EPSILON_1)
                 return t;
             t -= gt / gyt;
         }
@@ -246,7 +239,7 @@ public:
             BasicObject(color, emission, refl, brdf), axis(_axis), bezier(_bezier) {}
 
     virtual std::tuple<utils::Vector3, double, Point2D> intersect(const Ray &ray) const override {
-        if (std::abs(ray.direction.y()) < epsilon2) { // light parallel to x-z plane
+        if (std::abs(ray.direction.y()) < EPSILON_3) { // light parallel to x-z plane
             double temp = utils::Vector3(axis.x() - ray.origin.x(), 0, axis.z() - ray.origin.z()).len();
             double initial_y = ray.getVector(temp).y();
             double t_ = horiz_ray_solver(initial_y - axis.y()); // y(t) = y_0
@@ -254,35 +247,57 @@ public:
                 return {utils::Vector3(), INF, Point2D(0, 0)};
             auto hit = bezier.getPoint(t_);
             double err = std::abs(initial_y - hit.y - axis.y());
-            if (err > epsilon2)
+            if (err > EPSILON_2)
                 return {utils::Vector3(), INF, Point2D(0, 0)};
             double t = intersectSphere(ray, utils::Vector3(axis.x(), axis.y() + hit.y, axis.z()), hit.x);
+            //double t = horiz_intersect(ray, t_);
             if (t < 0 || t >= INF)
                 return {utils::Vector3(), INF, Point2D(0, 0)};
-            if (err <= epsilon) // already accurate enough
+            if (err <= EPSILON) // already accurate enough
             {
                 auto pnt = ray.getVector(t);
+                printf("(%lf, %lf, %lf)\n", pnt.x(), pnt.y(), pnt.z());
                 return {pnt, t, Point2D(t_, std::atan2(pnt.z() - axis.z(), pnt.x() - axis.x()) + M_PI)};
             } else {
                 // second iteration
                 t_ = horiz_ray_solver(ray.getVector(t).y() - axis.y());
                 hit = bezier.getPoint(t_);
                 t = intersectSphere(ray, utils::Vector3(axis.x(), axis.y() + hit.y, axis.z()), hit.x);
+                //t = horiz_intersect(ray, t_);
                 err = std::abs(ray.origin.y() - hit.y - axis.y());
-                if (err > epsilon2)
+                if (err > EPSILON_2)
                     return {utils::Vector3(), INF, Point2D(0, 0)};
                 else {
                     auto pnt = ray.getVector(t);
+                    printf("(%lf, %lf, %lf)\n", pnt.x(), pnt.y(), pnt.z());
                     return {pnt, t, Point2D(t_, std::atan2(pnt.z() - axis.z(), pnt.x() - axis.x()) + M_PI)};
                 }
             }
         } else // not parallel to x-z plane
         {
             auto aabb = boundingBox();
-            double initial = intersectAABB(ray, aabb.first, aabb.second);
-            double initial2 = .5;
-            if (initial >= INF)
-                return {utils::Vector3(), INF, Point2D(0, 0)}; // not intersect with aabb
+            double initial = intersectAABB(ray, aabb.first, aabb.second), initial2 = .5;
+            //if(initial >= INF)
+            //    return {utils::Vector3(), INF, Point2D()};
+            double final_t = INF;
+            double final_t_ = INF;
+            auto update_final_t = [this, &final_t, &final_t_](const Ray &ray, double t_) {
+                if (t_ < 0 || t_ > 1)
+                    return;
+                auto hit = this->bezier.getPoint(t_);
+                double t = (hit.y + this->axis.y() - ray.origin.y()) / ray.direction.y();
+                auto ray_hit = ray.getVector(t);
+                double err = std::abs(
+                        utils::Vector3(ray_hit.x() - this->axis.x(), 0, ray_hit.z() - this->axis.z()).len() - hit.x);
+                if (t < final_t)
+                    final_t = t, final_t_ = t_;
+                /*if (err > 1.)
+                    printf("Warning, error a bit large, %lf, current ray: o(%lf,%lf,%lf), d(%lf,%lf,%lf), hit: (%lf, %lf, %lf)\n", err,
+                           ray.origin.x(), ray.origin.y(), ray.origin.z(),
+                           ray.direction.x(), ray.direction.y(), ray.direction.z(),
+                           ray_hit.x(), ray_hit.y(), ray_hit.z());*/
+            };
+
             bool traversal_order =
                     (ray.direction.y() < 0) ^bezier.sliceOrder(); // true if ray casted in the direction of increasing t
             bool flag = true;
@@ -315,25 +330,36 @@ public:
                     }
                 }
             }
-            double t_ = normal_ray_solver(ray, initial);
-            double t2_ = normal_ray_solver(ray, initial2);
-            if ((t_ < 0 || t_ > 1) && (t2_ < 0 || t2_ > 1))
+
+            // g(t) = [Ay(t) + B]^2 - x^2(t) + C
+            double temp = ray.direction.x() * ray.direction.x() + ray.direction.z() * ray.direction.z();
+            double sqrt_temp = sqrt(temp);
+            double A = sqrt_temp / ray.direction.y();
+            double x0 = ray.origin.x() - axis.x(), z0 = ray.origin.z() - axis.z(), y0 = ray.origin.y() - axis.y();
+            double B = (x0 * ray.direction.x() + z0 * ray.direction.z()) / sqrt_temp - A * y0;
+            double C =
+                    (x0 * ray.direction.z() - z0 * ray.direction.x()) *
+                    (x0 * ray.direction.z() - z0 * ray.direction.x()) /
+                    sqrt_temp;
+
+            double t_ = normal_ray_solver(A, B, C, initial);
+            double t2_ = normal_ray_solver(A, B, C, initial2);
+            update_final_t(ray, t_);
+            update_final_t(ray, t2_);
+
+            if (final_t >= INF || final_t < 0)
                 return {utils::Vector3(), INF, Point2D(0, 0)};
-            auto point = bezier.getPoint(t_);
-            auto point2 = bezier.getPoint(t2_);
-            double t = (point.y - ray.origin.y() + axis.y()) / ray.direction.y();
-            double t2 = (point2.y - ray.origin.y() + axis.y()) / ray.direction.y();
-            if(t > t2)
-                t = t2;
-            auto hit = ray.getVector(t);
+
+            auto hit = ray.getVector(final_t);
+
             double phi = std::atan2(hit.z() - axis.z(), hit.x() - axis.x());
-            return {hit, t, Point2D(t_, phi < 0 ? phi + M_PI_2 : phi)};
+            return {hit, final_t, Point2D(final_t_, phi < 0 ? phi + M_PI_2 : phi)};
         }
     }
 
     virtual std::pair<utils::Vector3, utils::Vector3> boundingBox() const override {
-        return {utils::Vector3(-bezier.xMax() + axis.x(), bezier.yMin() + axis.y(), -bezier.xMax() + axis.z()),
-                utils::Vector3(bezier.xMax() + axis.x(), bezier.yMax() + axis.y(), bezier.xMax() + axis.z())};
+        return {utils::Vector3(-bezier.xMax() + axis.x() - 0.5, bezier.yMin() + axis.y() - 0.5, -bezier.xMax() + axis.z() - 0.5),
+                utils::Vector3(bezier.xMax() + axis.x() + 0.5, bezier.yMax() + axis.y() + 0.5, bezier.xMax() + axis.z() + 0.5)};
     }
 
     virtual utils::Vector3 norm(const utils::Vector3 &vec, const Point2D &surface_coord) const override {

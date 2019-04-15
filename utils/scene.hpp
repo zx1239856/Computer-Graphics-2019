@@ -23,7 +23,7 @@ public:
         Point2D param(0, 0);
         for (size_t i = 0; i < objects.size(); ++i) {
             auto res = objects[i]->intersect(r);
-            if (std::get<1>(res) < t && std::get<0>(res).len2() > epsilon)
+            if (std::get<1>(res) < t && std::get<0>(res).len2() > EPSILON)
                 t = std::get<1>(res), id = i, param = std::get<2>(res);
         }
         return {id, t, param};

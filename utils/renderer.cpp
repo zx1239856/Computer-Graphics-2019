@@ -14,7 +14,7 @@ utils::Vector3 basic_pt(const Scene &scene, const Ray &ray, int depth, unsigned 
     Texture texture = obj->getTexture();
     utils::Vector3 f = texture.color;
     double p = f.max();
-    if (f.max() < epsilon)
+    if (f.max() < EPSILON)
         return texture.emission;
     if (++depth > 5)
         if (erand48(X) < p)f = f * (1 / p);
@@ -29,7 +29,7 @@ utils::Vector3 basic_pt(const Scene &scene, const Ray &ray, int depth, unsigned 
     else {
         Ray reflray = Ray(x, ray.direction.reflect(nl));
         Vector3 d = ray.direction.refract(n, into ? 1 : texture.brdf, into ? texture.brdf : 1);
-        if (d.len2() < epsilon) // total internal reflection
+        if (d.len2() < EPSILON) // total internal reflection
             return texture.emission + f.mult(basic_pt(scene, reflray, depth, X));
         double a = texture.brdf - 1, b = texture.brdf + 1, R0 = a * a / (b * b), c =
                 1 - (into ? -ray.direction.dot(nl) : d.dot(n));

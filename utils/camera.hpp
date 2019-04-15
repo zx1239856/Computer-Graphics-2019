@@ -38,7 +38,7 @@ public:
         if (scene == nullptr)
             return c;
         utils::Vector3 cx = utils::Vector3(-direction.z(), 0, direction.x());
-        if (cx.len2() < epsilon) {
+        if (cx.len2() < EPSILON) {
             cx = utils::Vector3(1, 0, 0) * w / h * fov;  // camera pointing towards y-axis
         } else cx = cx.normalize() * w / h * fov;
         utils::Vector3 cy = cx.cross(direction).normalize() * fov, r;
