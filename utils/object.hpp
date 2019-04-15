@@ -293,11 +293,11 @@ public:
                         utils::Vector3(ray_hit.x() - this->axis.x(), 0, ray_hit.z() - this->axis.z()).len() - hit.x);
                 if (t < final_t)
                     final_t = t, final_t_ = t_;
-                /*if (err > 1.)
+                if (err > 1.)
                     printf("Warning, error a bit large, %lf, current ray: o(%lf,%lf,%lf), d(%lf,%lf,%lf), hit: (%lf, %lf, %lf)\n", err,
                            ray.origin.x(), ray.origin.y(), ray.origin.z(),
                            ray.direction.x(), ray.direction.y(), ray.direction.z(),
-                           ray_hit.x(), ray_hit.y(), ray_hit.z());*/
+                           ray_hit.x(), ray_hit.y(), ray_hit.z());
             };
 
             bool traversal_order =
@@ -342,7 +342,7 @@ public:
             double C =
                     (x0 * ray.direction.z() - z0 * ray.direction.x()) *
                     (x0 * ray.direction.z() - z0 * ray.direction.x()) /
-                    sqrt_temp;
+                    temp;
 
             double t_ = normal_ray_solver(A, B, C, initial);
             double t2_ = normal_ray_solver(A, B, C, initial2);
