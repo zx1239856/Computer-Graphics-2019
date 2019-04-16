@@ -212,7 +212,7 @@ class RotaryBezier : public BasicObject {
         return -1;
     }
 
-    double normal_ray_solver(double A, double B, double C, double initial_val, size_t iter = 15) const {
+    double normal_ray_solver(double A, double B, double C, double D, double initial_val, size_t iter = 15) const {
         double t = initial_val, gt, gyt;
         for (size_t i = iter; i; --i) {
             if (t < 0) t = EPSILON_2;
@@ -220,8 +220,8 @@ class RotaryBezier : public BasicObject {
             auto xy = bezier.getPoint(t);
             auto dxy = bezier.getDerivative(t);
             double val = (A * xy.y + B);
-            gt = val * val - xy.x * xy.x + C;
-            gyt = 2 * val * A * dxy.y - 2 * xy.x * dxy.x;
+            gt = val * val - D * xy.x * xy.x + C;
+            gyt = 2 * val * A * dxy.y - 2 * D * xy.x * dxy.x;
             if (std::abs(gt) < EPSILON_1)
                 return t;
             t -= gt / gyt;
@@ -247,8 +247,10 @@ public:
                 return {utils::Vector3(), INF, Point2D(0, 0)};
             auto hit = bezier.getPoint(t_);
             double err = std::abs(initial_y - hit.y - axis.y());
-            if (err > EPSILON_2)
+            if (err > EPSILON_2) {
+                printf("Dropping result because err too large: %lf\n", err);
                 return {utils::Vector3(), INF, Point2D(0, 0)};
+            }
             double t = intersectSphere(ray, utils::Vector3(axis.x(), axis.y() + hit.y, axis.z()), hit.x);
             //double t = horiz_intersect(ray, t_);
             if (t < 0 || t >= INF)
@@ -258,7 +260,7 @@ public:
                 auto pnt = ray.getVector(t);
                 //printf("(%lf, %lf, %lf)\n", pnt.x(), pnt.y(), pnt.z());
                 double phi = std::atan2(pnt.z() - axis.z(), pnt.x() - axis.x());
-                return {pnt, t, Point2D(t_,  phi < 0 ? phi + PI_DOUBLED : phi)};
+                return {pnt, t, Point2D(t_, phi < 0 ? phi + PI_DOUBLED : phi)};
             } else {
                 // second iteration
                 t_ = horiz_ray_solver(ray.getVector(t).y() - axis.y());
@@ -266,13 +268,14 @@ public:
                 t = intersectSphere(ray, utils::Vector3(axis.x(), axis.y() + hit.y, axis.z()), hit.x);
                 //t = horiz_intersect(ray, t_);
                 err = std::abs(ray.origin.y() - hit.y - axis.y());
-                if (err > EPSILON_2)
+                if (err > EPSILON_2) {
+                    printf("Dropping result because err too large: %lf\n", err);
                     return {utils::Vector3(), INF, Point2D(0, 0)};
-                else {
+                } else {
                     auto pnt = ray.getVector(t);
                     //printf("(%lf, %lf, %lf)\n", pnt.x(), pnt.y(), pnt.z());
                     double phi = std::atan2(pnt.z() - axis.z(), pnt.x() - axis.x());
-                    return {pnt, t, Point2D(t_,  phi < 0 ? phi + PI_DOUBLED : phi)};
+                    return {pnt, t, Point2D(t_, phi < 0 ? phi + PI_DOUBLED : phi)};
                 }
             }
         } else // not parallel to x-z plane
@@ -293,8 +296,9 @@ public:
                         utils::Vector3(ray_hit.x() - this->axis.x(), 0, ray_hit.z() - this->axis.z()).len() - hit.x);
                 if (t < final_t)
                     final_t = t, final_t_ = t_;
-                if (err > 1.)
-                    printf("Warning, error a bit large, %lf, current ray: o(%lf,%lf,%lf), d(%lf,%lf,%lf), hit: (%lf, %lf, %lf)\n", err,
+                if (err > EPSILON_3)
+                    printf("Warning, error a bit large, %lf, current ray: o(%lf,%lf,%lf), d(%lf,%lf,%lf), hit: (%lf, %lf, %lf)\n",
+                           err,
                            ray.origin.x(), ray.origin.y(), ray.origin.z(),
                            ray.direction.x(), ray.direction.y(), ray.direction.z(),
                            ray_hit.x(), ray_hit.y(), ray_hit.z());
@@ -333,19 +337,18 @@ public:
                 }
             }
 
-            // g(t) = [Ay(t) + B]^2 - x^2(t) + C
-            double temp = ray.direction.x() * ray.direction.x() + ray.direction.z() * ray.direction.z();
-            double sqrt_temp = sqrt(temp);
-            double A = sqrt_temp / ray.direction.y();
+            // g(t) = [Ay(t) + B]^2 - D * x^2(t) + C
+            double A = ray.direction.x() * ray.direction.x() + ray.direction.z() * ray.direction.z();
             double x0 = ray.origin.x() - axis.x(), z0 = ray.origin.z() - axis.z(), y0 = ray.origin.y() - axis.y();
-            double B = (x0 * ray.direction.x() + z0 * ray.direction.z()) / sqrt_temp - A * y0;
+            double B = (x0 * ray.direction.x() + z0 * ray.direction.z()) * ray.direction.y() - A * y0;
+            double d1_sqr = ray.direction.y() * ray.direction.y();
             double C =
                     (x0 * ray.direction.z() - z0 * ray.direction.x()) *
-                    (x0 * ray.direction.z() - z0 * ray.direction.x()) /
-                    temp;
+                    (x0 * ray.direction.z() - z0 * ray.direction.x()) * d1_sqr;
+            double D = d1_sqr * A;
 
-            double t_ = normal_ray_solver(A, B, C, initial);
-            double t2_ = normal_ray_solver(A, B, C, initial2);
+            double t_ = normal_ray_solver(A, B, C, D, initial);
+            double t2_ = normal_ray_solver(A, B, C, D, initial2);
             update_final_t(ray, t_);
             update_final_t(ray, t2_);
 
@@ -360,13 +363,20 @@ public:
     }
 
     virtual std::pair<utils::Vector3, utils::Vector3> boundingBox() const override {
-        return {utils::Vector3(-bezier.xMax() + axis.x() - 0.5, bezier.yMin() + axis.y() - 0.5, -bezier.xMax() + axis.z() - 0.5),
-                utils::Vector3(bezier.xMax() + axis.x() + 0.5, bezier.yMax() + axis.y() + 0.5, bezier.xMax() + axis.z() + 0.5)};
+        return {utils::Vector3(-bezier.xMax() + axis.x() - 0.5, bezier.yMin() + axis.y() - 0.5,
+                               -bezier.xMax() + axis.z() - 0.5),
+                utils::Vector3(bezier.xMax() + axis.x() + 0.5, bezier.yMax() + axis.y() + 0.5,
+                               bezier.xMax() + axis.z() + 0.5)};
     }
 
     virtual utils::Vector3 norm(const utils::Vector3 &vec, const Point2D &surface_coord) const override {
         auto dd = bezier.getDerivative(surface_coord.x);
+        auto tangent = utils::Vector3();
+        if (std::abs(dd.y / dd.x) > 1e8)
+            tangent = utils::Vector3(0, dd.y / dd.x > 0 ? 1 : -1, 0);
+        else
+            tangent = utils::Vector3(std::cos(surface_coord.y), dd.y / dd.x, std::sin(surface_coord.y));
         return utils::Vector3(-std::sin(surface_coord.y), 0, std::cos(surface_coord.y)).cross(
-                utils::Vector3(std::cos(surface_coord.y), dd.y / dd.x, std::sin(surface_coord.y))).normalize();
+                tangent).normalize();
     }
 };
