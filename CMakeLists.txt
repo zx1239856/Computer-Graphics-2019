@@ -4,6 +4,10 @@ project(hw2)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_BUILD_TYPE release)
 
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-sign-compare")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
 if(${CMAKE_BUILD_TYPE} MATCHES [rR][eE][lL][eE][aA][sS][eE])
     message("Release mode enabled, using OpenMP")
     FIND_PACKAGE(OpenMP REQUIRED)

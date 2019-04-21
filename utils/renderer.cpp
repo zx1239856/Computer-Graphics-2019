@@ -8,6 +8,8 @@ utils::Vector3 basic_pt(const Scene &scene, const Ray &ray, int depth, unsigned 
     if (std::get<0>(intersect) == -1)
         return utils::Vector3(); // no intersection
     BasicObject *obj = scene.object(std::get<0>(intersect));
+    if(obj == nullptr)
+        return utils::Vector3();
     bool into = false;
     utils::Vector3 x = ray.getVector(std::get<1>(intersect)), n = obj->norm(x, std::get<2>(intersect)), nl =
             n.dot(ray.direction) < 0 ? into = true, n : -n;
@@ -16,9 +18,10 @@ utils::Vector3 basic_pt(const Scene &scene, const Ray &ray, int depth, unsigned 
     double p = f.max();
     if (f.max() < EPSILON)
         return texture.emission;
-    if (++depth > 5)
+    if (++depth > 5) {
         if (erand48(X) < p)f = f * (1 / p);
         else return texture.emission;
+    }
     if (texture.refl == DIFF) {
         double r1 = 2 * M_PI * erand48(X), r2 = erand48(X), r2s = sqrt(r2);
         Vector3 w = nl, u = ((fabs(w.x()) > .1 ? Vector3(0, 1) : Vector3(1)).cross(w)).normalize(), v = w.cross(u);

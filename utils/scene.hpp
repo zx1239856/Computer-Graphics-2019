@@ -29,5 +29,10 @@ public:
         return {id, t, param};
     }
 
-    BasicObject *object(size_t idx) const { return objects[idx]; }
+    BasicObject *object(size_t idx) const {
+        if (idx >= objects.size()) {
+            return nullptr;
+        }
+        return objects[idx];
+    }
 };

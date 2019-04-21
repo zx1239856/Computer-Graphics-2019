@@ -101,6 +101,8 @@ public:
     virtual utils::Vector3 norm(const utils::Vector3 &vec, const Point2D &surface_coord) const = 0;
 
     Texture getTexture() const { return texture; }
+
+    virtual ~BasicObject() {}
 };
 
 class Sphere : public BasicObject {
@@ -190,6 +192,7 @@ public:
             return utils::Vector3(0, abs(vec.y() - p0.y()) < EPSILON ? -1 : 1, 0);
         if (abs(vec.z() - p0.z()) < EPSILON || abs(vec.z() - p1.z()) < EPSILON)
             return utils::Vector3(0, 0, abs(vec.z() - p0.z()) < EPSILON ? -1 : 1);
+        return utils::Vector3();
     }
 };
 
