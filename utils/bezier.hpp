@@ -16,7 +16,7 @@ namespace utils {
         double xmin = INF, xmax = -INF, ymin = INF, ymax = -INF;
 
         void aabbHelper() {
-            size_t block = samples / _ctrl_pnts.size() / 2;
+            size_t block = samples / _ctrl_pnts.size() / 3;
             for (size_t t = 0; t < samples; ++t) {
                 Point2D p = getPoint(static_cast<double>(t) / samples);
                 if (p.x > xmax)xmax = p.x;

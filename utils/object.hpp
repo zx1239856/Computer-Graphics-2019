@@ -299,7 +299,7 @@ public:
                         utils::Vector3(ray_hit.x() - this->axis.x(), 0, ray_hit.z() - this->axis.z()).len() - hit.x);
                 if (t < final_t)
                     final_t = t, final_t_ = t_;
-                if (err > EPSILON_3)
+                if (err > EPSILON_2)
                     printf("Warning, error a bit large, %lf, current ray: o(%lf,%lf,%lf), d(%lf,%lf,%lf), hit: (%lf, %lf, %lf)\n",
                            err,
                            ray.origin.x(), ray.origin.y(), ray.origin.z(),

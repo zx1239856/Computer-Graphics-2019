@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
                                       {20. / xscale, 60. / yscale},
                                       {15. / xscale, 70. / yscale},
                                       {30. / xscale, 80. / yscale}};
-    scene.addObject(new RotaryBezier(Vector3(297, 3, 197), ctrl_pnts, Vector3(.1, .1, .1) * .999, Vector3(), SPEC, 1.5));
+    scene.addObject(new RotaryBezier(Vector3(297, 3, 197), ctrl_pnts, Vector3(.25, .75, .75), Vector3(), DIFF, 1.3));
     int w = 1920, h = 1080;
     Camera cam(w, h);
     cam.setPosition(Vector3(150, 30, 295.6), Vector3(0.35, -0.030612, -0.4).normalize());
