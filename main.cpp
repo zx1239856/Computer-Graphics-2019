@@ -30,14 +30,14 @@ int main(int argc, char **argv) {
     // bezier part
     double xscale = 2, yscale = 2;
     std::vector<Point2D> ctrl_pnts = {{0. / xscale, 0. / yscale},
-                                      {27. / xscale, 0. / yscale},
+                                      {13. / xscale, 0. / yscale},
                                       {30. / xscale, 10. / yscale},
                                       {30. / xscale, 20. / yscale},
                                       {30. / xscale, 30. / yscale},
                                       {25. / xscale, 40. / yscale},
-                                      {20. / xscale, 60. / yscale},
-                                      {15. / xscale, 70. / yscale},
-                                      {30. / xscale, 80. / yscale}};
+                                      {15. / xscale, 50. / yscale},
+                                      {10. / xscale, 70. / yscale},
+                                      {20. / xscale, 80. / yscale}};
     scene.addObject(new RotaryBezier(Vector3(297, 3, 197), ctrl_pnts, Vector3(.25, .75, .75), Vector3(), DIFF, 1.3));
     int w = 1920, h = 1080;
     Camera cam(w, h);
