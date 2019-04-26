@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vector3.hpp"
+#include "geometry.hpp"
 #include "scene.hpp"
 #include "renderer.h"
 

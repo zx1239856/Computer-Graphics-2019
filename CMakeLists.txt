@@ -25,13 +25,15 @@ if(BUILD_CUDA)
     message("Build with cuda support")
 endif()
 
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+
 if(BUILD_BEZIER_TEST)
     message("Build bezier test")
-    find_package(OpenCV REQUIRED)
-    include_directories(${OpenCV_INCLUDE_DIRS})
     add_executable(bezier_test utils/bezier_test.cpp)
     target_link_libraries(bezier_test ${OpenCV_LIBS})
 endif()
 
-set(EXEC_FILES main.cpp utils/renderer.cpp)
+set(EXEC_FILES main.cpp utils/renderer.cpp utils/imghelper.h)
 add_executable(main ${EXEC_FILES})
+target_link_libraries(main ${OpenCV_LIBS})

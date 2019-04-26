@@ -96,6 +96,42 @@ namespace utils {
     inline Vector3 max(const Vector3 &a, const Vector3 &b) {
         return Vector3(std::max(a._x, b._x), std::max(a._y, b._y), std::max(a._z, b._z));
     }
+
+    struct Point2D {
+        double x;
+        double y;
+
+        Point2D(double x_ = 0, double y_ = 0) : x(x_), y(y_) {}
+
+        Point2D operator+(const Point2D &other) const {
+            return Point2D(x + other.x, y + other.y);
+        }
+
+        Point2D operator-(const Point2D &other) const {
+            return Point2D(x - other.x, y - other.y);
+        }
+
+        Point2D distance(const Point2D &other) const {
+            return std::sqrt(x * other.x + y * other.y);
+        }
+
+        Point2D distance2(const Point2D &other) const {
+            return x * other.x + y * other.y;
+        }
+    };
+
+    struct Transform2D {
+        double x11, x12, x21, x22;
+        double tx, ty;
+
+        Transform2D(double _x11 = 1, double _x12 = 0, double _x21 = 0, double _x22 = 1, double _tx = 0, double _ty = 0)
+                : x11(_x11), x12(_x12),
+                  x21(_x21), x22(_x22), tx(_tx), ty(_ty) {}
+
+        Point2D transform(const Point2D &p) const {
+            return Point2D(x11 * p.x + x12 * p.y + tx, x21 * p.x + x22 * p.y + ty);
+        }
+    };
 }
 
 #endif

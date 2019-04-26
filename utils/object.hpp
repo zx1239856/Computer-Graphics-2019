@@ -5,7 +5,7 @@
 #include <cassert>
 #include <cmath>
 #include "common.h"
-#include "vector3.hpp"
+#include "geometry.hpp"
 #include "ray.hpp"
 #include "bezier.hpp"
 
@@ -75,32 +75,77 @@ inline double intersectAABB(const Ray &ray, const utils::Vector3 &p0, const util
         return INF;
 }
 
-class Texture {
-public:
+struct TexturePT {
     utils::Vector3 color, emission;
-    Refl_t refl;
-    double brdf;
+    Refl_t refl_1, refl_2;
+    double probability; // probability of second REFL type
+    double re_idx;
+    std::vector<std::vector<utils::Vector3>> mapped_image;
+    utils::Transform2D mapped_transform;
 
-    Texture(const utils::Vector3 &_color, const utils::Vector3 &_emission, Refl_t _refl, double _brdf) :
-            color(_color), emission(_emission), refl(_refl), brdf(_brdf) {}
+    TexturePT(const utils::Vector3 &_color, const utils::Vector3 &_emission, Refl_t _refl, double _re_idx) :
+            color(_color), emission(_emission), refl_1(_refl), refl_2(DIFF), probability(0), re_idx(_re_idx) {}
+
+    TexturePT(const utils::Vector3 &_color, const utils::Vector3 &_emission, Refl_t _refl_1, Refl_t _refl_2,
+              double _prob, double _re_idx) :
+            color(_color), emission(_emission), refl_1(_refl_1), refl_2(_refl_2), probability(_prob), re_idx(_re_idx) {}
+
+    std::pair<utils::Vector3, Refl_t> getColor(const utils::Point2D &surface_coord, unsigned short X[3]) const {
+        if (!mapped_image.size()) // no texture mapping. use default color
+        {
+            if (erand48(X) < probability)
+                return {color, refl_2};
+            else
+                return {color, refl_1};
+        } else {
+            const int &w = mapped_image[0].size(), &h = mapped_image.size();
+            utils::Point2D p = mapped_transform.transform(surface_coord);
+            int u = (lround(w * p.y + .5) % w + w) % w, v =
+                    (lround(h * p.x + .5) % h + h) % h;
+            auto color = mapped_image[v][u]; // 8 bit per channel, so color is in [0, 255]
+            if (erand48(X) < probability)
+                return {color / 255. * 0.999, refl_2};
+            else if (color.x() >= 235 || color.y() >= 235 || color.z() >= 235)
+                return {color / 255. * 0.999, SPEC};
+            else
+                return {color / 255. * 0.999, refl_1};
+        }
+    }
+};
+
+struct TexturePPM {
+    double placeholder; // TODO
+};
+
+struct Texture {
+    TexturePT pt;
+    TexturePPM ppm;
+
+    Texture(const utils::Vector3 &_color, const utils::Vector3 &_emission, Refl_t _refl, double _re_idx) :
+            pt(_color, _emission, _refl, _re_idx) {}
+
+    Texture(const utils::Vector3 &_color, const utils::Vector3 &_emission, Refl_t _refl_1, Refl_t _refl_2, double prob,
+            double _re_idx) :
+            pt(_color, _emission, _refl_1, _refl_2, prob, _re_idx) {}
+
+    Texture(const TexturePT &_pt) : pt(_pt) {}
 };
 
 class BasicObject {
-    Texture texture;
 public:
-    BasicObject(const utils::Vector3 &color, const utils::Vector3 &emission, Refl_t refl, double brdf) :
-            texture(color, emission, refl, brdf) {}
+    Texture texture;
+
+    BasicObject(const utils::Vector3 &color, const utils::Vector3 &emission, Refl_t refl, double re_idx) :
+            texture(color, emission, refl, re_idx) {}
 
     BasicObject(const Texture &t) : texture(t) {}
 
     virtual std::pair<utils::Vector3, utils::Vector3> boundingBox() const = 0;
 
-    virtual std::tuple<utils::Vector3, double, Point2D>
+    virtual std::tuple<utils::Vector3, double, utils::Point2D>
     intersect(const Ray &ray) const = 0; // hit_point, distance, surface_coord
 
-    virtual utils::Vector3 norm(const utils::Vector3 &vec, const Point2D &surface_coord) const = 0;
-
-    Texture getTexture() const { return texture; }
+    virtual utils::Vector3 norm(const utils::Vector3 &vec, const utils::Point2D &surface_coord) const = 0;
 
     virtual ~BasicObject() {}
 };
@@ -112,26 +157,27 @@ public:
     Sphere(const utils::Vector3 &o, double r, const Texture &t) : BasicObject(t), origin(o), radius(r) {}
 
     Sphere(const utils::Vector3 &o, double r, const utils::Vector3 &_color, const utils::Vector3 &_emission,
-           Refl_t _refl, double _brdf) :
-            BasicObject(_color, _emission, _refl, _brdf), origin(o), radius(r) {}
+           Refl_t _refl, double _re_idx) :
+            BasicObject(_color, _emission, _refl, _re_idx), origin(o), radius(r) {}
 
-    virtual std::tuple<utils::Vector3, double, Point2D> intersect(const Ray &ray) const override {
+    virtual std::tuple<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const override {
         double t = intersectSphere(ray, origin, radius);
         if (t > 0 && t < INF) {
             auto hit = ray.getVector(t);
             double phi = std::atan2(hit.z() - origin.z(), hit.x() - origin.x());
-            return {hit, t, Point2D(std::acos((hit.y() - origin.y()) / radius),
-                                    phi < 0 ? phi + M_PI_2
-                                            : phi)}; // spherical coordinate (theta, phi), note y is the rotation axis here
+            return {hit, t, utils::Point2D(std::acos((hit.y() - origin.y()) / radius),
+                                           phi < 0 ? phi + PI_DOUBLED
+                                                   : phi)}; // spherical coordinate (theta, phi), note y is the rotation axis here
         } else
-            return {utils::Vector3(), INF, Point2D(0, 0)};
+            return {utils::Vector3(), INF, utils::Point2D(0, 0)};
     }
 
     virtual std::pair<utils::Vector3, utils::Vector3> boundingBox() const override {
         return {origin - radius, origin + radius};
     }
 
-    virtual utils::Vector3 norm(const utils::Vector3 &vec, const Point2D &unused = Point2D(0, 0)) const override {
+    virtual utils::Vector3
+    norm(const utils::Vector3 &vec, const utils::Point2D &unused = utils::Point2D(0, 0)) const override {
         assert(std::abs((vec - origin).len() - radius) < EPSILON);
         return (vec - origin).normalize();
     }
@@ -140,19 +186,36 @@ public:
 class Plane : public BasicObject {
     utils::Vector3 n;
     double d;
+    utils::Vector3 xp, yp;
+    utils::Vector3 origin;
+
+    void prepare() {
+        if (std::abs(std::abs(n.y()) - 1) < EPSILON_2)
+            xp = utils::Vector3(1, 0, 0), yp = utils::Vector3(0, 0, 1);
+        else
+            xp = n.cross(utils::Vector3(0, 1, 0)).normalize(), yp = xp.cross(n).normalize();
+        origin = n * d;
+    }
+
 public:
-    Plane(const utils::Vector3 &norm, double dis, const Texture &t) : BasicObject(t), n(norm.normalize()), d(dis) {}
+    Plane(const utils::Vector3 &norm, double dis, const Texture &t) : BasicObject(t), n(norm.normalize()), d(dis) {
+        prepare();
+    }
 
     Plane(const utils::Vector3 &norm, double dis, const utils::Vector3 &color, const utils::Vector3 &emission,
-          Refl_t refl, double brdf) :
-            BasicObject(color, emission, refl, brdf), n(norm.normalize()), d(dis) {}
+          Refl_t refl, double re_idx) :
+            BasicObject(color, emission, refl, re_idx), n(norm.normalize()), d(dis) {
+        prepare();
+    }
 
-    std::tuple<utils::Vector3, double, Point2D> intersect(const Ray &ray) const override {
+    std::tuple<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const override {
         double prod = ray.direction.dot(n);
         double t = (d - n.dot(ray.origin)) / prod;
         if (t < EPSILON)
-            return {utils::Vector3(), INF, Point2D(0, 0)};
-        return {ray.getVector(t), t, Point2D(0, 0)};  // TODO - USE PROJECTED COORD
+            return {utils::Vector3(), INF, utils::Point2D(0, 0)};
+        auto &&hit = ray.getVector(t);
+        auto vec = hit - origin;
+        return {hit, t, utils::Point2D(vec.dot(xp), vec.dot(yp))};  // project the vector to plane
     }
 
     virtual std::pair<utils::Vector3, utils::Vector3> boundingBox() const override {
@@ -160,7 +223,8 @@ public:
     }
 
     virtual utils::Vector3
-    norm(const utils::Vector3 &vec = utils::Vector3(), const Point2D &unused = Point2D(0, 0)) const override {
+    norm(const utils::Vector3 &vec = utils::Vector3(),
+         const utils::Point2D &unused = utils::Point2D(0, 0)) const override {
         return n;
     }
 };
@@ -173,19 +237,20 @@ public:
 
     Cube(const utils::Vector3 &_p0, const utils::Vector3 &_p1, const utils::Vector3 &color,
          const utils::Vector3 &emission,
-         Refl_t refl, double brdf) :
-            BasicObject(color, emission, refl, brdf), p0(min(_p0, _p1)), p1(max(_p0, _p1)) {}
+         Refl_t refl, double re_idx) :
+            BasicObject(color, emission, refl, re_idx), p0(min(_p0, _p1)), p1(max(_p0, _p1)) {}
 
-    virtual std::tuple<utils::Vector3, double, Point2D> intersect(const Ray &ray) const override {
+    virtual std::tuple<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const override {
         double t = intersectAABB(ray, p0, p1);
-        return {ray.getVector(t), t, Point2D(0, 0)}; // surface coordinate not available for cube
+        return {ray.getVector(t), t, utils::Point2D(0, 0)}; // surface coordinate not available for cube
     }
 
     virtual std::pair<utils::Vector3, utils::Vector3> boundingBox() const override {
         return {p0, p1};
     }
 
-    virtual utils::Vector3 norm(const utils::Vector3 &vec, const Point2D &unused = Point2D(0, 0)) const override {
+    virtual utils::Vector3
+    norm(const utils::Vector3 &vec, const utils::Point2D &unused = utils::Point2D(0, 0)) const override {
         if (abs(vec.x() - p0.x()) < EPSILON || abs(vec.x() - p1.x()) < EPSILON)
             return utils::Vector3(abs(vec.x() - p0.x()) < EPSILON ? -1 : 1, 0, 0);
         if (abs(vec.y() - p0.y()) < EPSILON || abs(vec.y() - p1.y()) < EPSILON)
@@ -238,32 +303,32 @@ public:
 
     RotaryBezier(const utils::Vector3 &_axis, const utils::Bezier2D &_bezier, const utils::Vector3 &color,
                  const utils::Vector3 &emission,
-                 Refl_t refl, double brdf) :
-            BasicObject(color, emission, refl, brdf), axis(_axis), bezier(_bezier) {}
+                 Refl_t refl, double re_idx) :
+            BasicObject(color, emission, refl, re_idx), axis(_axis), bezier(_bezier) {}
 
-    virtual std::tuple<utils::Vector3, double, Point2D> intersect(const Ray &ray) const override {
+    virtual std::tuple<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const override {
         if (std::abs(ray.direction.y()) < EPSILON_3) { // light parallel to x-z plane
             double temp = utils::Vector3(axis.x() - ray.origin.x(), 0, axis.z() - ray.origin.z()).len();
             double initial_y = ray.getVector(temp).y();
             double t_ = horiz_ray_solver(initial_y - axis.y()); // y(t) = y_0
             if (t_ < 0 || t_ > 1)
-                return {utils::Vector3(), INF, Point2D(0, 0)};
+                return {utils::Vector3(), INF, utils::Point2D(0, 0)};
             auto hit = bezier.getPoint(t_);
             double err = std::abs(initial_y - hit.y - axis.y());
             if (err > EPSILON_2) {
                 printf("Dropping result because err too large: %lf\n", err);
-                return {utils::Vector3(), INF, Point2D(0, 0)};
+                return {utils::Vector3(), INF, utils::Point2D(0, 0)};
             }
             double t = intersectSphere(ray, utils::Vector3(axis.x(), axis.y() + hit.y, axis.z()), hit.x);
             //double t = horiz_intersect(ray, t_);
             if (t < 0 || t >= INF)
-                return {utils::Vector3(), INF, Point2D(0, 0)};
+                return {utils::Vector3(), INF, utils::Point2D(0, 0)};
             if (err <= EPSILON) // already accurate enough
             {
                 auto pnt = ray.getVector(t);
                 //printf("(%lf, %lf, %lf)\n", pnt.x(), pnt.y(), pnt.z());
                 double phi = std::atan2(pnt.z() - axis.z(), pnt.x() - axis.x());
-                return {pnt, t, Point2D(t_, phi < 0 ? phi + PI_DOUBLED : phi)};
+                return {pnt, t, utils::Point2D(t_, phi < 0 ? phi + PI_DOUBLED : phi)};
             } else {
                 // second iteration
                 t_ = horiz_ray_solver(ray.getVector(t).y() - axis.y());
@@ -273,12 +338,12 @@ public:
                 err = std::abs(ray.origin.y() - hit.y - axis.y());
                 if (err > EPSILON_2) {
                     printf("Dropping result because err too large: %lf\n", err);
-                    return {utils::Vector3(), INF, Point2D(0, 0)};
+                    return {utils::Vector3(), INF, utils::Point2D(0, 0)};
                 } else {
                     auto pnt = ray.getVector(t);
                     //printf("(%lf, %lf, %lf)\n", pnt.x(), pnt.y(), pnt.z());
                     double phi = std::atan2(pnt.z() - axis.z(), pnt.x() - axis.x());
-                    return {pnt, t, Point2D(t_, phi < 0 ? phi + PI_DOUBLED : phi)};
+                    return {pnt, t, utils::Point2D(t_, phi < 0 ? phi + PI_DOUBLED : phi)};
                 }
             }
         } else // not parallel to x-z plane
@@ -356,12 +421,12 @@ public:
             update_final_t(ray, t2_);
 
             if (final_t >= INF || final_t < 0)
-                return {utils::Vector3(), INF, Point2D(0, 0)};
+                return {utils::Vector3(), INF, utils::Point2D(0, 0)};
 
             auto hit = ray.getVector(final_t);
 
             double phi = std::atan2(hit.z() - axis.z(), hit.x() - axis.x());
-            return {hit, final_t, Point2D(final_t_, phi < 0 ? phi + PI_DOUBLED : phi)};
+            return {hit, final_t, utils::Point2D(final_t_, phi < 0 ? phi + PI_DOUBLED : phi)};
         }
     }
 
@@ -372,7 +437,7 @@ public:
                                bezier.xMax() + axis.z() + 0.5)};
     }
 
-    virtual utils::Vector3 norm(const utils::Vector3 &vec, const Point2D &surface_coord) const override {
+    virtual utils::Vector3 norm(const utils::Vector3 &vec, const utils::Point2D &surface_coord) const override {
         auto dd = bezier.getDerivative(surface_coord.x);
         auto tangent = utils::Vector3();
         if (std::abs(dd.y / dd.x) > 1e8)

@@ -17,10 +17,10 @@ public:
     void addObject(BasicObject *obj) { objects.emplace_back(obj); }
 
     // find the first obj that the ray intersects(with minimum t)
-    std::tuple<int, double, Point2D> findFirstIntersect(const Ray &r) const {
+    std::tuple<int, double, utils::Point2D> findFirstIntersect(const Ray &r) const {
         double t = INF;
         size_t id = -1;
-        Point2D param(0, 0);
+        utils::Point2D param(0, 0);
         for (size_t i = 0; i < objects.size(); ++i) {
             auto res = objects[i]->intersect(r);
             if (std::get<1>(res) < t && std::get<0>(res).len2() > EPSILON)

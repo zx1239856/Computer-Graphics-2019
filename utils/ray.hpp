@@ -1,5 +1,5 @@
 #pragma once
-#include "vector3.hpp"
+#include "geometry.hpp"
 #include <stdio.h>
 
 class Ray
