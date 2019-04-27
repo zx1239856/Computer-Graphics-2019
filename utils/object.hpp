@@ -30,49 +30,35 @@ inline double intersectSphere(const Ray &ray, const utils::Vector3 &o, double r)
 
 inline double intersectAABB(const Ray &ray, const utils::Vector3 &p0, const utils::Vector3 &p1) {
     double t, t_min = INF;
-    auto check_tmin = [&t, &t_min](std::function<bool()> const &inrange) {
-        if (t > 0 && t < t_min)
-            if (inrange())
-                t_min = t;
-    };
-    auto xcheck = [&]() -> bool {
-        auto v = ray.getVector(t);
-        return p0.y() <= v.y() && v.y() <= p1.y() && p0.z() <= v.z() && v.z() <= p1.z();
-    };
-    auto ycheck = [&]() -> bool {
-        auto v = ray.getVector(t);
-        return p0.x() <= v.x() && v.x() <= p1.x() && p0.z() <= v.z() && v.z() <= p1.z();
-    };
-    auto zcheck = [&]() -> bool {
-        auto v = ray.getVector(t);
-        return p0.y() <= v.y() && v.y() <= p1.y() && p0.x() <= v.x() && v.x() <= p1.x();
-    };
+
     if (ray.direction.x() > 0) // p0 is visible
-    {
         t = (p0.x() - ray.origin.x()) / ray.direction.x();
-        check_tmin(xcheck);
-    } else {
-        t = (p1.x() - ray.origin.x()) / ray.direction.x();
-        check_tmin(xcheck);
-    }
-    if (ray.direction.y() > 0) {
-        t = (p0.y() - ray.origin.y()) / ray.direction.y();
-        check_tmin(ycheck);
-    } else {
-        t = (p1.y() - ray.origin.y()) / ray.direction.y();
-        check_tmin(ycheck);
-    }
-    if (ray.direction.z() > 0) {
-        t = (p0.z() - ray.origin.z()) / ray.direction.z();
-        check_tmin(zcheck);
-    } else {
-        t = (p1.z() - ray.origin.z()) / ray.direction.z();
-        check_tmin(zcheck);
-    }
-    if (t_min < INF)
-        return t_min;
     else
-        return INF;
+        t = (p1.x() - ray.origin.x()) / ray.direction.x();
+
+    auto v = ray.getVector(t);
+    if (t > 0 && t < t_min && p0.y() <= v.y() && v.y() <= p1.y() && p0.z() <= v.z() && v.z() <= p1.z())
+        t_min = t;
+
+    if (ray.direction.y() > 0)
+        t = (p0.y() - ray.origin.y()) / ray.direction.y();
+    else
+        t = (p1.y() - ray.origin.y()) / ray.direction.y();
+
+    v = ray.getVector(t);
+    if (t > 0 && t < t_min && p0.x() <= v.x() && v.x() <= p1.x() && p0.z() <= v.z() && v.z() <= p1.z())
+        t_min = t;
+
+    if (ray.direction.z() > 0)
+        t = (p0.z() - ray.origin.z()) / ray.direction.z();
+    else
+        t = (p1.z() - ray.origin.z()) / ray.direction.z();
+
+    v = ray.getVector(t);
+    if (t > 0 && t < t_min && p0.y() <= v.y() && v.y() <= p1.y() && p0.x() <= v.x() && v.x() <= p1.x())
+        t_min = t;
+
+    return t_min;
 }
 
 struct TexturePT {

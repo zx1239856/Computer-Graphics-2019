@@ -50,6 +50,37 @@ KernelArray<T> convertToKernel(thrust::device_vector<T>& dVec)
     return kArray;
 }
 
+template <typename T>
+KernelArray<T> makeKernelArr(std::vector<T> &src)
+{
+    KernelArray<T> kArray;
+    CUDA_SAFE_CALL(cudaMalloc((void**)&kArray._array, sizeof(T) * src.size()));
+    CUDA_SAFE_CALL(cudaMemcpy(kArray._array, src.data(), sizeof(T) * src.size(), cudaMemcpyHostToDevice));
+    kArray._size = src.size();
+    return kArray;
+}
+
+template <typename T>
+KernelArray<T> createKernelArr(size_t size)
+{
+    KernelArray<T> kArray;
+    CUDA_SAFE_CALL(cudaMalloc((void**)&kArray._array, sizeof(T) * size));
+    kArray._size = size;
+    return kArray;
+}
+
+template <typename T>
+std::vector<T> makeStdVector(KernelArray<T> arr) {
+    std::vector<T> res(arr._size);
+    CUDA_SAFE_CALL(cudaMemcpy(res.data(), arr._array, sizeof(T) * arr._size, cudaMemcpyDeviceToHost));
+    return res;
+}
+
+template <typename T>
+void releaseKernelArr(KernelArray<T> arr) {
+    CUDA_SAFE_CALL(cudaFree(arr._array));
+}
+
 template <typename T, typename K>
 struct pair
 {

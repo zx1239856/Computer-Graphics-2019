@@ -1,12 +1,11 @@
 #include <cuda_runtime.h>
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
 #include "cuda_helpers.h"
 #include "math_helpers.h"
 #include "bezier.hpp"
 #include "object.hpp"
 #include "render_helpers.h"
 #include "../utils/bezier.hpp"
+#include <cuda_profiler_api.h>
 
 __global__ void
 debug_kernel(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU> cubes, KernelArray<Plane_GPU> planes,
@@ -109,7 +108,7 @@ __global__ void render_pt(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU>
 
     for (int sy = 0; sy < 2; ++sy) {  // 2x2 super sampling
         for (int sx = 0; sx < 2; ++sx) {
-            utils::Vector3 r = utils::Vector3(0, 0);
+            utils::Vector3 r = utils::Vector3();
             for (int s = 0; s < samps; ++s) {
                 double r1 = 2 * curand_uniform_double(&state), dx = r1 < 1 ? sqrtf(r1) : 2 - sqrtf(2 - r1);
                 double r2 = 2 * curand_uniform_double(&state), dy = r2 < 1 ? sqrtf(r2) : 2 - sqrtf(2 - r2);
@@ -121,8 +120,7 @@ __global__ void render_pt(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU>
                                           (utils::Vector3(curand_uniform_double(&state) * 1.01,
                                                           curand_uniform_double(&state)) - .5) * 2 *
                                           cam.aperture; // origin perturbation
-                d = d.normalize();
-                r = r + radiance(spheres, cubes, planes, beziers, Ray(p_origin, (hit - p_origin).normalize()), &state) *
+                r += radiance(spheres, cubes, planes, beziers, Ray(p_origin, (hit - p_origin).normalize()), &state) *
                         (1. / samps);
             }
             out_buffer._array[(cam.h - v - 1) * cam.w + u] += r.clamp(0, 1) * .25;
@@ -134,6 +132,7 @@ int main(int argc, char **argv) {
     using namespace utils;
     if (argc != 2)
         return 0;
+    cudaProfilerStart();
     std::vector<Sphere_GPU> spheres_;
     spheres_.emplace_back(Sphere_GPU(Vector3(150, 1e5, 181.6), 1e5, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5));
     spheres_.emplace_back(
@@ -153,8 +152,6 @@ int main(int argc, char **argv) {
     cv::Mat _watercolor = cv::imread("../texture/watercolor.jpg");
     auto &&grunge_arr = cvMat2FlatArr(_grunge);
     auto &&watercolor_arr = cvMat2FlatArr(_watercolor);
-    thrust::device_vector<utils::Vector3> grunge(grunge_arr.begin(), grunge_arr.end());
-    thrust::device_vector<utils::Vector3> watercolor(watercolor_arr.begin(), watercolor_arr.end());
     Texture_GPU grunge_texture, watercolor_texture;
     grunge_texture.pt.color = Vector3(.75, .75, .75);
     grunge_texture.pt.emission = Vector3();
@@ -163,7 +160,7 @@ int main(int argc, char **argv) {
     grunge_texture.pt.probability = 0;
     grunge_texture.pt.img_w = _grunge.cols;
     grunge_texture.pt.img_h = _grunge.rows;
-    grunge_texture.pt.mapped_image = convertToKernel(grunge);
+    grunge_texture.pt.mapped_image = makeKernelArr(grunge_arr);
     grunge_texture.pt.mapped_transform = Transform2D(2, 0, 0, 2);
     watercolor_texture.pt.color = Vector3(.9, .9, .5) * .999;
     watercolor_texture.pt.emission = Vector3();
@@ -172,10 +169,10 @@ int main(int argc, char **argv) {
     watercolor_texture.pt.probability = 0;
     watercolor_texture.pt.img_w = _watercolor.cols;
     watercolor_texture.pt.img_h = _watercolor.rows;
-    watercolor_texture.pt.mapped_image = convertToKernel(watercolor);
+    watercolor_texture.pt.mapped_image = makeKernelArr(watercolor_arr);
     watercolor_texture.pt.mapped_transform = Transform2D(1 / M_PI, 0, 0, .5 / M_PI, 0, 0.25);
-    planes_.emplace_back(Plane_GPU(Vector3(0, 0, -1), 0, grunge_texture));
-    spheres_.emplace_back(Sphere_GPU(Vector3(327, 20, 97), 20, watercolor_texture));
+    planes_.emplace_back(Plane_GPU(Vector3(0, 0, -1), 0, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5));
+    spheres_.emplace_back(Sphere_GPU(Vector3(327, 20, 97), 20, Vector3(.75, .75, .75), Vector3(), SPEC, 1.5));
 
     double xscale = 2, yscale = 2;
     std::vector<Point2D> ctrl_pnts = {{0. / xscale, 0. / yscale},
@@ -191,21 +188,12 @@ int main(int argc, char **argv) {
     auto &&coeff = bezier__.getAllCoeffs();
     auto &&slices = bezier__.getAllSlices();
     auto &&slicesParam = bezier__.getAllSlicesParam();
-    thrust::device_vector<Point2D> _ctrl(ctrl_pnts.begin(), ctrl_pnts.end());
-    thrust::device_vector<Point2D> _coeff(coeff.begin(), coeff.end());
-    thrust::device_vector<Point2D> _slices(slices.begin(), slices.end());
-    thrust::device_vector<double> _slicesParam(slicesParam.begin(), slicesParam.end());
     Bezier2D_GPU bezier;
-    bezier._ctrl_pnts = convertToKernel(_ctrl), bezier._coeff = convertToKernel(_coeff),
-    bezier._slices = convertToKernel(_slices), bezier._slices_param = convertToKernel(_slicesParam);
+    bezier._ctrl_pnts = makeKernelArr(ctrl_pnts), bezier._coeff = makeKernelArr(coeff),
+    bezier._slices = makeKernelArr(slices), bezier._slices_param = makeKernelArr(slicesParam);
 
     watercolor_texture.pt.mapped_transform = Transform2D(-1., 0, 0, .5 / M_PI, 0, 0.25);
-    beziers_.emplace_back(RotaryBezier_GPU(Vector3(297, 3, 197), bezier, watercolor_texture));
-
-    thrust::device_vector<Sphere_GPU> spheres(spheres_.begin(), spheres_.end());
-    thrust::device_vector<Cube_GPU> cubes(cubes_.begin(), cubes_.end());
-    thrust::device_vector<Plane_GPU> planes(planes_.begin(), planes_.end());
-    thrust::device_vector<RotaryBezier_GPU> beziers(beziers_.begin(), beziers_.end());
+    //beziers_.emplace_back(RotaryBezier_GPU(Vector3(297, 3, 197), bezier, watercolor_texture));
 
     //debug_kernel<<<1,1>>>(convertToKernel(spheres), convertToKernel(cubes), convertToKernel(planes), convertToKernel(beziers));
     //cudaDeviceSynchronize();
@@ -218,14 +206,18 @@ int main(int argc, char **argv) {
     };
 
     // render
-    thrust::device_vector<Vector3> gpu_out(cam.w * cam.h);
     const dim3 nblocks(cam.w / 16u, cam.h / 16u);
     const dim3 nthreads(16u, 16u);
+    KernelArray<utils::Vector3> gpu_out = createKernelArr<utils::Vector3>(static_cast<size_t>(cam.w * cam.h));
     render_pt << < nblocks, nthreads >> >
-                            (convertToKernel(spheres), convertToKernel(cubes), convertToKernel(planes), convertToKernel(
-                                    beziers), cam, atoi(argv[1])/4, convertToKernel(gpu_out));
-    cudaDeviceSynchronize();
-    thrust::host_vector<Vector3> res = gpu_out;
+                            (makeKernelArr(spheres_), makeKernelArr(cubes_), makeKernelArr(planes_), makeKernelArr(
+                                    beziers_), cam, atoi(argv[1])/4, gpu_out);
+    std::vector<Vector3> res = makeStdVector(gpu_out);
+    releaseKernelArr(grunge_texture.pt.mapped_image);
+    releaseKernelArr(watercolor_texture.pt.mapped_image);
+    releaseKernelArr(bezier._ctrl_pnts); releaseKernelArr(bezier._coeff); releaseKernelArr(bezier._slices); releaseKernelArr(bezier._slices_param);
+    releaseKernelArr(gpu_out);
+    cudaProfilerStop();
     FILE *f = fopen("image.ppm", "w");
     fprintf(f, "P3\n%d %d\n%d\n", cam.w, cam.h, 255);
     for (int i = 0; i < cam.w * cam.h; ++i)

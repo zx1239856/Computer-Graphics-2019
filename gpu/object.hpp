@@ -28,53 +28,38 @@ __device__ inline double intersectSphere(const Ray &ray, const utils::Vector3 &o
 
 __device__ inline double intersectAABB(const Ray &ray, const utils::Vector3 &p0, const utils::Vector3 &p1) {
     double t, t_min = INF;
-    auto check_tmin = [&t, &t_min](nvstd::function<bool()> const &inrange) {
-        if (t > 0 && t < t_min)
-            if (inrange())
-                t_min = t;
-    };
-    auto xcheck = [&]() -> bool {
-        auto v = ray.getVector(t);
-        return p0.y() <= v.y() && v.y() <= p1.y() && p0.z() <= v.z() && v.z() <= p1.z();
-    };
-    auto ycheck = [&]() -> bool {
-        auto v = ray.getVector(t);
-        return p0.x() <= v.x() && v.x() <= p1.x() && p0.z() <= v.z() && v.z() <= p1.z();
-    };
-    auto zcheck = [&]() -> bool {
-        auto v = ray.getVector(t);
-        return p0.y() <= v.y() && v.y() <= p1.y() && p0.x() <= v.x() && v.x() <= p1.x();
-    };
+
     if (ray.direction.x() > 0) // p0 is visible
-    {
         t = (p0.x() - ray.origin.x()) / ray.direction.x();
-        check_tmin(xcheck);
-    } else {
-        t = (p1.x() - ray.origin.x()) / ray.direction.x();
-        check_tmin(xcheck);
-    }
-    if (ray.direction.y() > 0) {
-        t = (p0.y() - ray.origin.y()) / ray.direction.y();
-        check_tmin(ycheck);
-    } else {
-        t = (p1.y() - ray.origin.y()) / ray.direction.y();
-        check_tmin(ycheck);
-    }
-    if (ray.direction.z() > 0) {
-        t = (p0.z() - ray.origin.z()) / ray.direction.z();
-        check_tmin(zcheck);
-    } else {
-        t = (p1.z() - ray.origin.z()) / ray.direction.z();
-        check_tmin(zcheck);
-    }
-    if (t_min < INF)
-        return t_min;
     else
-        return INF;
+        t = (p1.x() - ray.origin.x()) / ray.direction.x();
+
+    auto v = ray.getVector(t);
+    if (t > 0 && t < t_min && p0.y() <= v.y() && v.y() <= p1.y() && p0.z() <= v.z() && v.z() <= p1.z())
+        t_min = t;
+
+    if (ray.direction.y() > 0)
+        t = (p0.y() - ray.origin.y()) / ray.direction.y();
+    else
+        t = (p1.y() - ray.origin.y()) / ray.direction.y();
+
+    v = ray.getVector(t);
+    if (t > 0 && t < t_min && p0.x() <= v.x() && v.x() <= p1.x() && p0.z() <= v.z() && v.z() <= p1.z())
+        t_min = t;
+
+    if (ray.direction.z() > 0)
+        t = (p0.z() - ray.origin.z()) / ray.direction.z();
+    else
+        t = (p1.z() - ray.origin.z()) / ray.direction.z();
+
+    v = ray.getVector(t);
+    if (t > 0 && t < t_min && p0.y() <= v.y() && v.y() <= p1.y() && p0.x() <= v.x() && v.x() <= p1.x())
+        t_min = t;
+
+    return t_min;
 }
 
-struct __align__(16)
-        TexturePT_GPU {
+struct TexturePT_GPU {
     utils::Vector3 color, emission;
     Refl_t refl_1, refl_2;
     double probability; // probability of second REFL type
@@ -83,7 +68,9 @@ struct __align__(16)
     int img_w = 0, img_h = 0;
     utils::Transform2D mapped_transform;
 
-    __device__ pair<utils::Vector3, Refl_t> getColor(const utils::Point2D &surface_coord, curandState* state) const {
+    __device__ pair<utils::Vector3, Refl_t>
+
+    getColor(const utils::Point2D &surface_coord, curandState *state) const {
         if (!mapped_image._size) // no texture mapping. use default color
         {
             if (curand_uniform_double(state) < probability)
@@ -106,32 +93,35 @@ struct __align__(16)
     }
 };
 
-struct __align__(16)
-        TexturePPM_GPU {
+struct TexturePPM_GPU {
     double placeholder; // TODO
 };
 
-struct __align__(16)
-        Texture_GPU {
+struct Texture_GPU {
     TexturePT_GPU pt;
     TexturePPM_GPU ppm;
 };
 
-struct __align__(16)
-        Sphere_GPU{
+struct Sphere_GPU {
     utils::Vector3 origin;
     double radius;
     Texture_GPU texture;
 
-    __host__ __device__ Sphere_GPU(const utils::Vector3 &o, double r, const Texture_GPU &t) : origin(o), radius(r), texture(t) {}
+    __host__ __device__
 
-    __host__ __device__ Sphere_GPU(const utils::Vector3 &o, double r, const utils::Vector3 &_color, const utils::Vector3 &_emission,
-           Refl_t _refl, double _re_idx) : origin(o), radius(r) {
-        texture.pt.color=_color, texture.pt.emission=_emission, texture.pt.refl_1=_refl, 
-texture.pt.re_idx=_re_idx, texture.pt.probability=0;
+    Sphere_GPU(const utils::Vector3 &o, double r, const Texture_GPU &t) : origin(o), radius(r), texture(t) {}
+
+    __host__ __device__
+
+    Sphere_GPU(const utils::Vector3 &o, double r, const utils::Vector3 &_color, const utils::Vector3 &_emission,
+               Refl_t _refl, double _re_idx) : origin(o), radius(r) {
+        texture.pt.color = _color, texture.pt.emission = _emission, texture.pt.refl_1 = _refl,
+        texture.pt.re_idx = _re_idx, texture.pt.probability = 0;
     }
 
-    __device__ triplet<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const{
+    __device__ triplet<utils::Vector3, double, utils::Point2D>
+
+    intersect(const Ray &ray) const {
         double t = intersectSphere(ray, origin, radius);
         if (t > 0 && t < INF) {
             auto hit = ray.getVector(t);
@@ -143,43 +133,54 @@ texture.pt.re_idx=_re_idx, texture.pt.probability=0;
             return {utils::Vector3(), INF, utils::Point2D(0, 0)};
     }
 
-    __device__ pair<utils::Vector3, utils::Vector3> boundingBox() const{
+    __device__ pair<utils::Vector3, utils::Vector3>
+
+    boundingBox() const {
         return {origin - radius, origin + radius};
     }
 
     __device__ utils::Vector3
-    norm(const utils::Vector3 &vec, const utils::Point2D &unused = utils::Point2D(0, 0)) const{
+
+    norm(const utils::Vector3 &vec, const utils::Point2D &unused = utils::Point2D(0, 0)) const {
         return (vec - origin).normalize();
     }
 };
 
-struct __align__(16)
-Plane_GPU{
+struct Plane_GPU {
     utils::Vector3 n;
     double d;
     utils::Vector3 xp, yp;
     utils::Vector3 origin;
     Texture_GPU texture;
 
-    __host__ __device__ void prepare() {
+    __host__ __device__
+
+    void prepare() {
         if (abs(abs(n.y()) - 1) < EPSILON_2)
             xp = utils::Vector3(1, 0, 0), yp = utils::Vector3(0, 0, 1);
         else
             xp = n.cross(utils::Vector3(0, 1, 0)).normalize(), yp = xp.cross(n).normalize();
         origin = n * d;
     }
-    __host__ __device__ Plane_GPU(const utils::Vector3 &norm, double dis, const Texture_GPU &t) : n(norm.normalize()), d(dis), texture(t) {
+
+    __host__ __device__
+
+    Plane_GPU(const utils::Vector3 &norm, double dis, const Texture_GPU &t) : n(norm.normalize()), d(dis), texture(t) {
         prepare();
     }
 
-    __host__ __device__ Plane_GPU(const utils::Vector3 &norm, double dis, const utils::Vector3 &color, const utils::Vector3 &emission,
-          Refl_t refl, double re_idx) : n(norm.normalize()), d(dis) {
-        texture.pt.color=color, texture.pt.emission=emission, texture.pt.refl_1=refl, 
-texture.pt.re_idx=re_idx, texture.pt.probability=0;
+    __host__ __device__
+
+    Plane_GPU(const utils::Vector3 &norm, double dis, const utils::Vector3 &color, const utils::Vector3 &emission,
+              Refl_t refl, double re_idx) : n(norm.normalize()), d(dis) {
+        texture.pt.color = color, texture.pt.emission = emission, texture.pt.refl_1 = refl,
+        texture.pt.re_idx = re_idx, texture.pt.probability = 0;
         prepare();
     }
 
-    __device__ triplet<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const{
+    __device__ triplet<utils::Vector3, double, utils::Point2D>
+
+    intersect(const Ray &ray) const {
         double prod = ray.direction.dot(n);
         double t = (d - n.dot(ray.origin)) / prod;
         if (t < EPSILON)
@@ -189,42 +190,54 @@ texture.pt.re_idx=re_idx, texture.pt.probability=0;
         return {hit, t, utils::Point2D(vec.dot(xp), vec.dot(yp))};  // project the vector to plane
     }
 
-    __device__ pair<utils::Vector3, utils::Vector3> boundingBox() const{
+    __device__ pair<utils::Vector3, utils::Vector3>
+
+    boundingBox() const {
         return {n, n}; // the bounding box of a plane is ill-defined
     }
 
     __device__ utils::Vector3
+
     norm(const utils::Vector3 &vec = utils::Vector3(),
-         const utils::Point2D &unused = utils::Point2D(0, 0)) const{
+         const utils::Point2D &unused = utils::Point2D(0, 0)) const {
         return n;
     }
 };
 
-struct __align__(16)
-        Cube_GPU {
+struct Cube_GPU {
     utils::Vector3 p0, p1;
     Texture_GPU texture;
-    __host__ __device__ Cube_GPU(const utils::Vector3 &_p0, const utils::Vector3 &_p1, const Texture_GPU &t) : p0(min(_p0, _p1)),
-                                                                                   p1(max(_p0, _p1)), texture(t) {}
+    __host__ __device__
 
-    __host__ __device__ Cube_GPU(const utils::Vector3 &_p0, const utils::Vector3 &_p1, const utils::Vector3 &color,
-         const utils::Vector3 &emission,
-         Refl_t refl, double re_idx) : p0(min(_p0, _p1)), p1(max(_p0, _p1)) {
-        texture.pt.color=color, texture.pt.emission=emission, texture.pt.refl_1=refl, 
-texture.pt.re_idx=re_idx, texture.pt.probability=0;
+    Cube_GPU(const utils::Vector3 &_p0, const utils::Vector3 &_p1, const Texture_GPU &t) : p0(min(_p0, _p1)),
+                                                                                           p1(max(_p0, _p1)),
+                                                                                           texture(t) {}
+
+    __host__ __device__
+
+    Cube_GPU(const utils::Vector3 &_p0, const utils::Vector3 &_p1, const utils::Vector3 &color,
+             const utils::Vector3 &emission,
+             Refl_t refl, double re_idx) : p0(min(_p0, _p1)), p1(max(_p0, _p1)) {
+        texture.pt.color = color, texture.pt.emission = emission, texture.pt.refl_1 = refl,
+        texture.pt.re_idx = re_idx, texture.pt.probability = 0;
     }
 
-    __device__ triplet<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const{
+    __device__ triplet<utils::Vector3, double, utils::Point2D>
+
+    intersect(const Ray &ray) const {
         double t = intersectAABB(ray, p0, p1);
         return {ray.getVector(t), t, utils::Point2D(0, 0)}; // surface coordinate not available for cube
     }
 
-    __device__ pair<utils::Vector3, utils::Vector3> boundingBox() const{
+    __device__ pair<utils::Vector3, utils::Vector3>
+
+    boundingBox() const {
         return {p0, p1};
     }
 
     __device__ utils::Vector3
-    norm(const utils::Vector3 &vec, const utils::Point2D &unused = utils::Point2D(0, 0)) const{
+
+    norm(const utils::Vector3 &vec, const utils::Point2D &unused = utils::Point2D(0, 0)) const {
         if (abs(vec.x() - p0.x()) < EPSILON || abs(vec.x() - p1.x()) < EPSILON)
             return utils::Vector3(abs(vec.x() - p0.x()) < EPSILON ? -1 : 1, 0, 0);
         if (abs(vec.y() - p0.y()) < EPSILON || abs(vec.y() - p1.y()) < EPSILON)
@@ -235,8 +248,7 @@ texture.pt.re_idx=re_idx, texture.pt.probability=0;
     }
 };
 
-struct __align__(16)
-        RotaryBezier_GPU {
+struct RotaryBezier_GPU {
     utils::Vector3 axis;
     utils::Bezier2D_GPU bezier;
     Texture_GPU texture;
@@ -256,7 +268,8 @@ struct __align__(16)
         return -1;
     }
 
-    __device__ double normal_ray_solver(double A, double B, double C, double D, double initial_val, size_t iter = 15) const {
+    __device__ double
+    normal_ray_solver(double A, double B, double C, double D, double initial_val, size_t iter = 15) const {
         double t = initial_val, gt, gyt;
         for (size_t i = iter; i; --i) {
             if (t < 0) t = EPSILON_2;
@@ -273,17 +286,23 @@ struct __align__(16)
         return -1;
     }
 
-    __host__ __device__ RotaryBezier_GPU(const utils::Vector3 &_axis, const utils::Bezier2D_GPU &_bezier, const Texture_GPU &t) :
+    __host__ __device__
+
+    RotaryBezier_GPU(const utils::Vector3 &_axis, const utils::Bezier2D_GPU &_bezier, const Texture_GPU &t) :
             axis(_axis), bezier(_bezier), texture(t) {}
 
-    __host__ __device__ RotaryBezier_GPU(const utils::Vector3 &_axis, const utils::Bezier2D_GPU &_bezier, const utils::Vector3 &color,
-                 const utils::Vector3 &emission,
-                 Refl_t refl, double re_idx) : axis(_axis), bezier(_bezier) {
-        texture.pt.color=color, texture.pt.emission=emission, texture.pt.refl_1=refl, 
-texture.pt.re_idx=re_idx, texture.pt.probability=0;
+    __host__ __device__
+
+    RotaryBezier_GPU(const utils::Vector3 &_axis, const utils::Bezier2D_GPU &_bezier, const utils::Vector3 &color,
+                     const utils::Vector3 &emission,
+                     Refl_t refl, double re_idx) : axis(_axis), bezier(_bezier) {
+        texture.pt.color = color, texture.pt.emission = emission, texture.pt.refl_1 = refl,
+        texture.pt.re_idx = re_idx, texture.pt.probability = 0;
     }
 
-    __device__ triplet<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const{
+    __device__ triplet<utils::Vector3, double, utils::Point2D>
+
+    intersect(const Ray &ray) const {
         if (abs(ray.direction.y()) < EPSILON_3) { // light parallel to x-z plane
             double temp = utils::Vector3(axis.x() - ray.origin.x(), 0, axis.z() - ray.origin.z()).len();
             double initial_y = ray.getVector(temp).y();
@@ -327,7 +346,7 @@ texture.pt.re_idx=re_idx, texture.pt.probability=0;
         {
             auto aabb = boundingBox();
             double initial = intersectAABB(ray, aabb.first, aabb.second), initial2 = .5;
-            if(initial >= INF)
+            if (initial >= INF)
                 return {utils::Vector3(), INF, utils::Point2D()};
             double final_t = INF;
             double final_t_ = INF;
@@ -399,14 +418,18 @@ texture.pt.re_idx=re_idx, texture.pt.probability=0;
         }
     }
 
-    __device__ pair<utils::Vector3, utils::Vector3> boundingBox() const {
+    __device__ pair<utils::Vector3, utils::Vector3>
+
+    boundingBox() const {
         return {utils::Vector3(-bezier.xmax + axis.x() - 0.5, bezier.ymin + axis.y() - 0.5,
                                -bezier.xmax + axis.z() - 0.5),
-                utils::Vector3(bezier.xmax + axis.x() + 0.5, bezier.ymax+ axis.y() + 0.5,
+                utils::Vector3(bezier.xmax + axis.x() + 0.5, bezier.ymax + axis.y() + 0.5,
                                bezier.xmax + axis.z() + 0.5)};
     }
 
-    __device__ utils::Vector3 norm(const utils::Vector3 &vec, const utils::Point2D &surface_coord) const{
+    __device__ utils::Vector3
+
+    norm(const utils::Vector3 &vec, const utils::Point2D &surface_coord) const {
         auto dd = bezier.getDerivative(surface_coord.x);
         auto tangent = utils::Vector3();
         if (abs(dd.y / dd.x) > 1e8)
