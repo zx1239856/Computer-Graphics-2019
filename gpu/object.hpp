@@ -1,5 +1,8 @@
 #pragma once
-
+/*
+ * Objects changed for GPU code
+ * Safe for bit-wise copy if mapped texture is not present
+ */
 #include <nvfunctional>
 #include "../common/common.h"
 #include "../common/geometry.hpp"
@@ -70,7 +73,8 @@ __device__ inline double intersectAABB(const Ray &ray, const utils::Vector3 &p0,
         return INF;
 }
 
-struct TexturePT_GPU {
+struct __align__(16)
+        TexturePT_GPU {
     utils::Vector3 color, emission;
     Refl_t refl_1, refl_2;
     double probability; // probability of second REFL type
@@ -102,58 +106,29 @@ struct TexturePT_GPU {
     }
 };
 
-struct TexturePPM_GPU {
+struct __align__(16)
+        TexturePPM_GPU {
     double placeholder; // TODO
 };
 
-struct Texture_GPU {
+struct __align__(16)
+        Texture_GPU {
     TexturePT_GPU pt;
     TexturePPM_GPU ppm;
 };
 
-enum class ObjectType {
-    basic, cube, sphere, plane, bezier, other
-};
-
-class BasicObject_GPU {
-public:
-    Texture_GPU texture;
-
-    ObjectType type;
-
-    __host__ __device__ BasicObject_GPU(const utils::Vector3 &color, const utils::Vector3 &emission, Refl_t refl, double re_idx) {
-        texture.pt.color = color, texture.pt.emission = emission, texture.pt.refl_1 = refl, texture.pt.probability = 0,
-        texture.pt.re_idx = re_idx, type = ObjectType::basic;
-    }
-
-    __host__ __device__ BasicObject_GPU(const Texture_GPU &t) : texture(t) {}
-
-    pair<utils::Vector3, utils::Vector3> boundingBox() const {
-        return {utils::Vector3(), utils::Vector3()};
-    }
-
-    triplet<utils::Vector3, double, utils::Point2D>
-    intersect(const Ray &ray) const {
-        return {utils::Vector3(), INF, utils::Point2D()};
-    }
-
-    utils::Vector3 norm(const utils::Vector3 &vec, const utils::Point2D &surface_coord) const {
-        return utils::Vector3(1, 0, 0);
-    }
-};
-
-class Sphere_GPU : public BasicObject_GPU {
+struct __align__(16)
+        Sphere_GPU{
     utils::Vector3 origin;
     double radius;
-public:
-    __host__ __device__ Sphere_GPU(const utils::Vector3 &o, double r, const Texture_GPU &t) : BasicObject_GPU(t), origin(o), radius(r) {
-        type = ObjectType::sphere;
-    }
+    Texture_GPU texture;
+
+    __host__ __device__ Sphere_GPU(const utils::Vector3 &o, double r, const Texture_GPU &t) : origin(o), radius(r), texture(t) {}
 
     __host__ __device__ Sphere_GPU(const utils::Vector3 &o, double r, const utils::Vector3 &_color, const utils::Vector3 &_emission,
-           Refl_t _refl, double _re_idx) :
-            BasicObject_GPU(_color, _emission, _refl, _re_idx), origin(o), radius(r) {
-        type = ObjectType::sphere;
+           Refl_t _refl, double _re_idx) : origin(o), radius(r) {
+        texture.pt.color=_color, texture.pt.emission=_emission, texture.pt.refl_1=_refl, 
+texture.pt.re_idx=_re_idx, texture.pt.probability=0;
     }
 
     __device__ triplet<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const{
@@ -178,11 +153,13 @@ public:
     }
 };
 
-class Plane_GPU : public BasicObject_GPU {
+struct __align__(16)
+Plane_GPU{
     utils::Vector3 n;
     double d;
     utils::Vector3 xp, yp;
     utils::Vector3 origin;
+    Texture_GPU texture;
 
     __host__ __device__ void prepare() {
         if (abs(abs(n.y()) - 1) < EPSILON_2)
@@ -191,17 +168,14 @@ class Plane_GPU : public BasicObject_GPU {
             xp = n.cross(utils::Vector3(0, 1, 0)).normalize(), yp = xp.cross(n).normalize();
         origin = n * d;
     }
-
-public:
-    __host__ __device__ Plane_GPU(const utils::Vector3 &norm, double dis, const Texture_GPU &t) : BasicObject_GPU(t), n(norm.normalize()), d(dis) {
-        type = ObjectType::plane;
+    __host__ __device__ Plane_GPU(const utils::Vector3 &norm, double dis, const Texture_GPU &t) : n(norm.normalize()), d(dis), texture(t) {
         prepare();
     }
 
     __host__ __device__ Plane_GPU(const utils::Vector3 &norm, double dis, const utils::Vector3 &color, const utils::Vector3 &emission,
-          Refl_t refl, double re_idx) :
-            BasicObject_GPU(color, emission, refl, re_idx), n(norm.normalize()), d(dis) {
-        type = ObjectType::plane;
+          Refl_t refl, double re_idx) : n(norm.normalize()), d(dis) {
+        texture.pt.color=color, texture.pt.emission=emission, texture.pt.refl_1=refl, 
+texture.pt.re_idx=re_idx, texture.pt.probability=0;
         prepare();
     }
 
@@ -226,19 +200,18 @@ public:
     }
 };
 
-class Cube_GPU : public BasicObject_GPU {
+struct __align__(16)
+        Cube_GPU {
     utils::Vector3 p0, p1;
-public:
-    __host__ __device__ Cube_GPU(const utils::Vector3 &_p0, const utils::Vector3 &_p1, const Texture_GPU &t) : BasicObject_GPU(t), p0(min(_p0, _p1)),
-                                                                                   p1(max(_p0, _p1)) {
-        type = ObjectType::cube;
-    }
+    Texture_GPU texture;
+    __host__ __device__ Cube_GPU(const utils::Vector3 &_p0, const utils::Vector3 &_p1, const Texture_GPU &t) : p0(min(_p0, _p1)),
+                                                                                   p1(max(_p0, _p1)), texture(t) {}
 
     __host__ __device__ Cube_GPU(const utils::Vector3 &_p0, const utils::Vector3 &_p1, const utils::Vector3 &color,
          const utils::Vector3 &emission,
-         Refl_t refl, double re_idx) :
-            BasicObject_GPU(color, emission, refl, re_idx), p0(min(_p0, _p1)), p1(max(_p0, _p1)) {
-        type = ObjectType::cube;
+         Refl_t refl, double re_idx) : p0(min(_p0, _p1)), p1(max(_p0, _p1)) {
+        texture.pt.color=color, texture.pt.emission=emission, texture.pt.refl_1=refl, 
+texture.pt.re_idx=re_idx, texture.pt.probability=0;
     }
 
     __device__ triplet<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const{
@@ -262,9 +235,11 @@ public:
     }
 };
 
-class RotaryBezier_GPU : public BasicObject_GPU {
+struct __align__(16)
+        RotaryBezier_GPU {
     utils::Vector3 axis;
     utils::Bezier2D_GPU bezier;
+    Texture_GPU texture;
 
     // rotate bezier2d curve along y-axis
     __device__ double horiz_ray_solver(double y, size_t iter = 15) const {
@@ -298,14 +273,15 @@ class RotaryBezier_GPU : public BasicObject_GPU {
         return -1;
     }
 
-public:
     __host__ __device__ RotaryBezier_GPU(const utils::Vector3 &_axis, const utils::Bezier2D_GPU &_bezier, const Texture_GPU &t) :
-            BasicObject_GPU(t), axis(_axis), bezier(_bezier) {}
+            axis(_axis), bezier(_bezier), texture(t) {}
 
     __host__ __device__ RotaryBezier_GPU(const utils::Vector3 &_axis, const utils::Bezier2D_GPU &_bezier, const utils::Vector3 &color,
                  const utils::Vector3 &emission,
-                 Refl_t refl, double re_idx) :
-            BasicObject_GPU(color, emission, refl, re_idx), axis(_axis), bezier(_bezier) {}
+                 Refl_t refl, double re_idx) : axis(_axis), bezier(_bezier) {
+        texture.pt.color=color, texture.pt.emission=emission, texture.pt.refl_1=refl, 
+texture.pt.re_idx=re_idx, texture.pt.probability=0;
+    }
 
     __device__ triplet<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const{
         if (abs(ray.direction.y()) < EPSILON_3) { // light parallel to x-z plane
@@ -351,8 +327,8 @@ public:
         {
             auto aabb = boundingBox();
             double initial = intersectAABB(ray, aabb.first, aabb.second), initial2 = .5;
-            //if(initial >= INF)
-            //    return {utils::Vector3(), INF, Point2D()};
+            if(initial >= INF)
+                return {utils::Vector3(), INF, utils::Point2D()};
             double final_t = INF;
             double final_t_ = INF;
             auto update_final_t = [this, &final_t, &final_t_](const Ray &ray, double t_) {
@@ -361,8 +337,6 @@ public:
                 auto hit = this->bezier.getPoint(t_);
                 double t = (hit.y + this->axis.y() - ray.origin.y()) / ray.direction.y();
                 auto ray_hit = ray.getVector(t);
-                double err = abs(
-                        utils::Vector3(ray_hit.x() - this->axis.x(), 0, ray_hit.z() - this->axis.z()).len() - hit.x);
                 if (t < final_t)
                     final_t = t, final_t_ = t_;
             };

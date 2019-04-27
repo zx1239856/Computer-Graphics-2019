@@ -350,8 +350,8 @@ public:
         {
             auto aabb = boundingBox();
             double initial = intersectAABB(ray, aabb.first, aabb.second), initial2 = .5;
-            //if(initial >= INF)
-            //    return {utils::Vector3(), INF, Point2D()};
+            if(initial >= INF)
+                return {utils::Vector3(), INF, utils::Point2D()};
             double final_t = INF;
             double final_t_ = INF;
             auto update_final_t = [this, &final_t, &final_t_](const Ray &ray, double t_) {
