@@ -48,8 +48,8 @@ int main(int argc, char **argv) {
                                       {15. / xscale, 50. / yscale},
                                       {10. / xscale, 70. / yscale},
                                       {20. / xscale, 80. / yscale}};
-    Texture texture(Vector3(1., 1., 1.) * 0.8, Vector3(), DIFF, SPEC, 0.15, 1.3);
-    scene.addObject(new RotaryBezier(Vector3(297, 3, 197), ctrl_pnts, texture));
+    watercolor_texture.pt.mapped_transform = utils::Transform2D(-1., 0, 0, .5/M_PI, 0, 0.25);
+    scene.addObject(new RotaryBezier(Vector3(297, 3, 197), ctrl_pnts, watercolor_texture));
     int w = 1920, h = 1080;
     Camera cam(w, h);
     cam.setPosition(Vector3(150, 30, 295.6), Vector3(0.35, -0.030612, -0.4).normalize());

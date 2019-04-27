@@ -5,8 +5,8 @@
 #ifndef HW2_RENDERER_H
 #define HW2_RENDERER_H
 
-#include "geometry.hpp"
-#include "ray.hpp"
+#include "../common/geometry.hpp"
+#include "../common/ray.hpp"
 
 class Scene;
 

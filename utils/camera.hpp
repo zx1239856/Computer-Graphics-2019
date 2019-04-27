@@ -1,6 +1,6 @@
 #pragma once
 
-#include "geometry.hpp"
+#include "../common/geometry.hpp"
 #include "scene.hpp"
 #include "renderer.h"
 

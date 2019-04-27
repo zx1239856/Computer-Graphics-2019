@@ -4,7 +4,11 @@
 
 #ifndef HW2_COMMON_H
 #define HW2_COMMON_H
+#ifndef __NVCC__
 #include <cmath>
+#else
+#define M_PI 3.14159265358979323846
+#endif
 
 constexpr double EPSILON = 1e-6;
 constexpr double EPSILON_2 = 5e-5;

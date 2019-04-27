@@ -8,7 +8,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/core.hpp>
 #include <vector>
-#include "geometry.hpp"
+#include "../common/geometry.hpp"
 
 utils::Vector3 getPixel(const cv::Mat &img, int x, int y)
 {

@@ -2,7 +2,8 @@
 
 #include <vector>
 #include <cmath>
-#include "common.h"
+#include "../common/common.h"
+#include "../common/geometry.hpp"
 
 namespace utils {
 
@@ -105,6 +106,18 @@ namespace utils {
 
         std::pair<Point2D, double> getSliceParam(size_t idx) const {
             return {_slices[idx], _slices_param[idx]};
+        }
+
+        std::vector<Point2D> getAllCoeffs() const {
+            return _coeff;
+        }
+
+        std::vector<Point2D> getAllSlices() const {
+            return _slices;
+        }
+
+        std::vector<double> getAllSlicesParam() const {
+            return _slices_param;
         }
     };
 }
