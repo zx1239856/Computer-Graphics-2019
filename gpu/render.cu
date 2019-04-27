@@ -132,7 +132,6 @@ int main(int argc, char **argv) {
     using namespace utils;
     if (argc != 2)
         return 0;
-    cudaProfilerStart();
     std::vector<Sphere_GPU> spheres_;
     spheres_.emplace_back(Sphere_GPU(Vector3(150, 1e5, 181.6), 1e5, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5));
     spheres_.emplace_back(
@@ -171,8 +170,9 @@ int main(int argc, char **argv) {
     watercolor_texture.pt.img_h = _watercolor.rows;
     watercolor_texture.pt.mapped_image = makeKernelArr(watercolor_arr);
     watercolor_texture.pt.mapped_transform = Transform2D(1 / M_PI, 0, 0, .5 / M_PI, 0, 0.25);
-    planes_.emplace_back(Plane_GPU(Vector3(0, 0, -1), 0, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5));
-    spheres_.emplace_back(Sphere_GPU(Vector3(327, 20, 97), 20, Vector3(.75, .75, .75), Vector3(), SPEC, 1.5));
+    spheres_.emplace_back(Sphere_GPU(Vector3(327, 20, 97), 20, watercolor_texture));
+    watercolor_texture.pt.mapped_transform = Transform2D(1e-3, 0, 0, 1e-3, 0, 0);
+    planes_.emplace_back(Plane_GPU(Vector3(0, 0, -1), 0, watercolor_texture));
 
     double xscale = 2, yscale = 2;
     std::vector<Point2D> ctrl_pnts = {{0. / xscale, 0. / yscale},
@@ -191,9 +191,10 @@ int main(int argc, char **argv) {
     Bezier2D_GPU bezier;
     bezier._ctrl_pnts = makeKernelArr(ctrl_pnts), bezier._coeff = makeKernelArr(coeff),
     bezier._slices = makeKernelArr(slices), bezier._slices_param = makeKernelArr(slicesParam);
+    bezier.xmax = bezier__.xMax(), bezier.xmin = bezier__.xMin(), bezier.ymax = bezier__.yMax(), bezier.ymin = bezier__.yMin();
 
     watercolor_texture.pt.mapped_transform = Transform2D(-1., 0, 0, .5 / M_PI, 0, 0.25);
-    //beziers_.emplace_back(RotaryBezier_GPU(Vector3(297, 3, 197), bezier, watercolor_texture));
+    beziers_.emplace_back(RotaryBezier_GPU(Vector3(297, 3, 197), bezier, watercolor_texture));
 
     //debug_kernel<<<1,1>>>(convertToKernel(spheres), convertToKernel(cubes), convertToKernel(planes), convertToKernel(beziers));
     //cudaDeviceSynchronize();
@@ -217,7 +218,6 @@ int main(int argc, char **argv) {
     releaseKernelArr(watercolor_texture.pt.mapped_image);
     releaseKernelArr(bezier._ctrl_pnts); releaseKernelArr(bezier._coeff); releaseKernelArr(bezier._slices); releaseKernelArr(bezier._slices_param);
     releaseKernelArr(gpu_out);
-    cudaProfilerStop();
     FILE *f = fopen("image.ppm", "w");
     fprintf(f, "P3\n%d %d\n%d\n", cam.w, cam.h, 255);
     for (int i = 0; i < cam.w * cam.h; ++i)

@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
     Texture grunge_texture(Vector3(.75, .75, .75), Vector3(), DIFF, 1.5);
     Texture watercolor_texture(Vector3(.9, .9, .5) * .999, Vector3(), DIFF, 1.5);
     grunge_texture.pt.mapped_image = cvMat2Arr(_grunge);
-    grunge_texture.pt.mapped_transform = utils::Transform2D(2, 0, 0, 2);
+    grunge_texture.pt.mapped_transform = utils::Transform2D(1e-3, 0, 0, 1e-3);
     watercolor_texture.pt.mapped_image = cvMat2Arr(_watercolor);
     watercolor_texture.pt.mapped_transform = utils::Transform2D(1/M_PI, 0, 0, .5/M_PI, 0, 0.25);
     scene.addObject(new Plane(Vector3(0, 0, -1), 0, grunge_texture)); // back

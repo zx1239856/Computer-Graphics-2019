@@ -283,6 +283,24 @@ class RotaryBezier : public BasicObject {
         return -1;
     }
 
+    void update_final_t(const Ray &ray, double t_, double &final_t, double &final_t_) const {
+        if (t_ < 0 || t_ > 1)
+            return;
+        auto hit = this->bezier.getPoint(t_);
+        double t = (hit.y + this->axis.y() - ray.origin.y()) / ray.direction.y();
+        auto ray_hit = ray.getVector(t);
+        double err = std::abs(
+                utils::Vector3(ray_hit.x() - this->axis.x(), 0, ray_hit.z() - this->axis.z()).len() - hit.x);
+        if (t < final_t)
+            final_t = t, final_t_ = t_;
+        if (err > EPSILON_2)
+            printf("Warning, error a bit large, %lf, current ray: o(%lf,%lf,%lf), d(%lf,%lf,%lf), hit: (%lf, %lf, %lf)\n",
+                   err,
+                   ray.origin.x(), ray.origin.y(), ray.origin.z(),
+                   ray.direction.x(), ray.direction.y(), ray.direction.z(),
+                   ray_hit.x(), ray_hit.y(), ray_hit.z());
+    }
+
 public:
     RotaryBezier(const utils::Vector3 &_axis, const utils::Bezier2D &_bezier, const Texture &t) :
             BasicObject(t), axis(_axis), bezier(_bezier) {}
@@ -340,23 +358,6 @@ public:
                 return {utils::Vector3(), INF, utils::Point2D()};
             double final_t = INF;
             double final_t_ = INF;
-            auto update_final_t = [this, &final_t, &final_t_](const Ray &ray, double t_) {
-                if (t_ < 0 || t_ > 1)
-                    return;
-                auto hit = this->bezier.getPoint(t_);
-                double t = (hit.y + this->axis.y() - ray.origin.y()) / ray.direction.y();
-                auto ray_hit = ray.getVector(t);
-                double err = std::abs(
-                        utils::Vector3(ray_hit.x() - this->axis.x(), 0, ray_hit.z() - this->axis.z()).len() - hit.x);
-                if (t < final_t)
-                    final_t = t, final_t_ = t_;
-                if (err > EPSILON_2)
-                    printf("Warning, error a bit large, %lf, current ray: o(%lf,%lf,%lf), d(%lf,%lf,%lf), hit: (%lf, %lf, %lf)\n",
-                           err,
-                           ray.origin.x(), ray.origin.y(), ray.origin.z(),
-                           ray.direction.x(), ray.direction.y(), ray.direction.z(),
-                           ray_hit.x(), ray_hit.y(), ray_hit.z());
-            };
 
             bool traversal_order =
                     (ray.direction.y() < 0) ^bezier.sliceOrder(); // true if ray casted in the direction of increasing t
@@ -403,8 +404,8 @@ public:
 
             double t_ = normal_ray_solver(A, B, C, D, initial);
             double t2_ = normal_ray_solver(A, B, C, D, initial2);
-            update_final_t(ray, t_);
-            update_final_t(ray, t2_);
+            update_final_t(ray, t_, final_t, final_t_);
+            update_final_t(ray, t2_, final_t, final_t_);
 
             if (final_t >= INF || final_t < 0)
                 return {utils::Vector3(), INF, utils::Point2D(0, 0)};

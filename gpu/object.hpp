@@ -286,6 +286,16 @@ struct RotaryBezier_GPU {
         return -1;
     }
 
+    __device__  void update_final_t(const Ray &ray, double t_, double &final_t, double &final_t_) const {
+        if (t_ < 0 || t_ > 1)
+            return;
+        auto hit = this->bezier.getPoint(t_);
+        double t = (hit.y + this->axis.y() - ray.origin.y()) / ray.direction.y();
+        auto ray_hit = ray.getVector(t);
+        if (t < final_t)
+            final_t = t, final_t_ = t_;
+    }
+
     __host__ __device__
 
     RotaryBezier_GPU(const utils::Vector3 &_axis, const utils::Bezier2D_GPU &_bezier, const Texture_GPU &t) :
@@ -350,15 +360,6 @@ struct RotaryBezier_GPU {
                 return {utils::Vector3(), INF, utils::Point2D()};
             double final_t = INF;
             double final_t_ = INF;
-            auto update_final_t = [this, &final_t, &final_t_](const Ray &ray, double t_) {
-                if (t_ < 0 || t_ > 1)
-                    return;
-                auto hit = this->bezier.getPoint(t_);
-                double t = (hit.y + this->axis.y() - ray.origin.y()) / ray.direction.y();
-                auto ray_hit = ray.getVector(t);
-                if (t < final_t)
-                    final_t = t, final_t_ = t_;
-            };
 
             bool traversal_order =
                     (ray.direction.y() < 0) ^bezier.sliceOrder(); // true if ray casted in the direction of increasing t
@@ -405,8 +406,8 @@ struct RotaryBezier_GPU {
 
             double t_ = normal_ray_solver(A, B, C, D, initial);
             double t2_ = normal_ray_solver(A, B, C, D, initial2);
-            update_final_t(ray, t_);
-            update_final_t(ray, t2_);
+            update_final_t(ray, t_, final_t, final_t_);
+            update_final_t(ray, t2_, final_t, final_t_);
 
             if (final_t >= INF || final_t < 0)
                 return {utils::Vector3(), INF, utils::Point2D(0, 0)};
