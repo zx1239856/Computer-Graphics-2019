@@ -9,7 +9,6 @@
 #include <thrust/host_vector.h>
 #include "../common/geometry.hpp"
 #include "../utils/bezier.hpp"
-#include "bezier.hpp"
 #include "object.hpp"
 
 #include <opencv2/highgui.hpp>
@@ -67,17 +66,10 @@ int main() {
                                              {300., 800.},
                                              {250., 800.}};
     utils::Bezier2D bezier(ctrl_pnts);
-    auto &&coeff = bezier.getAllCoeffs();
-    auto &&slices = bezier.getAllSlices();
-    auto &&slicesParam = bezier.getAllSlicesParam();
-    thrust::device_vector<Point2D> _ctrl(ctrl_pnts.begin(), ctrl_pnts.end());
-    thrust::device_vector<Point2D> _coeff(coeff.begin(), coeff.end());
-    thrust::device_vector<Point2D> _slices(slices.begin(), slices.end());
-    thrust::device_vector<double> _slicesParam(slicesParam.begin(), slicesParam.end());
+    auto gpu_bezier = bezier.toGPU();
     thrust::device_vector<Point2D> result(1000);
     calcBezier << < 1, 1 >> >
-                       (convertToKernel(_ctrl), convertToKernel(_coeff), convertToKernel(_slices), convertToKernel(
-                               _slicesParam),
+                       (gpu_bezier._ctrl_pnts, gpu_bezier._coeff, gpu_bezier._slices, gpu_bezier._slices_param,
                                convertToKernel(result));
     cudaDeviceSynchronize();
     thrust::host_vector<Point2D> rr = result;

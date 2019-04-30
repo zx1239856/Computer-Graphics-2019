@@ -72,7 +72,7 @@ KernelArray<T> convertToKernel(thrust::device_vector<T>& dVec)
 }
 
 template <typename T>
-KernelArray<T> makeKernelArr(std::vector<T> &src)
+KernelArray<T> makeKernelArr(const std::vector<T> &src)
 {
     KernelArray<T> kArray;
     CUDA_SAFE_CALL(cudaMalloc((void**)&kArray._array, sizeof(T) * src.size()));
@@ -91,7 +91,7 @@ KernelArray<T> createKernelArr(size_t size)
 }
 
 template <typename T>
-std::vector<T> makeStdVector(KernelArray<T> arr) {
+std::vector<T> makeStdVector(const KernelArray<T> arr) {
     std::vector<T> res(arr._size);
     CUDA_SAFE_CALL(cudaMemcpy(res.data(), arr._array, sizeof(T) * arr._size, cudaMemcpyDeviceToHost));
     return res;
@@ -101,20 +101,5 @@ template <typename T>
 void releaseKernelArr(KernelArray<T> arr) {
     CUDA_SAFE_CALL(cudaFree(arr._array));
 }
-
-template <typename T, typename K>
-struct pair
-{
-        T first;
-        K second;
-};
-
-template <typename T, typename K, typename L>
-struct triplet
-{
-    T first;
-    K second;
-    L third;
-};
 
 #endif //HW2_CUDA_HELPERS_H

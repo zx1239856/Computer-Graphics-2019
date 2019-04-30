@@ -18,4 +18,19 @@ constexpr double PI_DOUBLED = M_PI + M_PI;
 constexpr double INF = 1e20;
 enum Refl_t { DIFF, SPEC, REFR }; // material type, DIFFuse, SPECular, REFRactive
 
+template <typename T, typename K>
+struct pair
+{
+    T first;
+    K second;
+};
+
+template <typename T, typename K, typename L>
+struct triplet
+{
+    T first;
+    K second;
+    L third;
+};
+
 #endif //HW2_COMMON_H

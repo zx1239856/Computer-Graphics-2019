@@ -1,7 +1,6 @@
 #include <cuda_runtime.h>
 #include "cuda_helpers.h"
 #include "math_helpers.h"
-#include "bezier.hpp"
 #include "object.hpp"
 #include "render_helpers.h"
 #include "../utils/bezier.hpp"
@@ -187,17 +186,10 @@ int main(int argc, char **argv) {
                                       {15. / xscale, 50. / yscale},
                                       {10. / xscale, 70. / yscale},
                                       {20. / xscale, 80. / yscale}};
-    Bezier2D bezier__(ctrl_pnts);
-    auto &&coeff = bezier__.getAllCoeffs();
-    auto &&slices = bezier__.getAllSlices();
-    auto &&slicesParam = bezier__.getAllSlicesParam();
-    Bezier2D_GPU bezier;
-    bezier._ctrl_pnts = makeKernelArr(ctrl_pnts), bezier._coeff = makeKernelArr(coeff),
-    bezier._slices = makeKernelArr(slices), bezier._slices_param = makeKernelArr(slicesParam);
-    bezier.xmax = bezier__.xMax(), bezier.xmin = bezier__.xMin(), bezier.ymax = bezier__.yMax(), bezier.ymin = bezier__.yMin();
+    Bezier2D cpu_bezier(ctrl_pnts);
 
     watercolor_texture.pt.mapped_transform = Transform2D(-1., 0, 0, .5 / M_PI, 0, 0.25);
-    beziers_.emplace_back(RotaryBezier_GPU(Vector3(297, 3, 197), bezier, watercolor_texture));
+    beziers_.emplace_back(RotaryBezier_GPU(Vector3(297, 3, 197), cpu_bezier.toGPU(), watercolor_texture));
 
     //debug_kernel<<<1,1>>>(convertToKernel(spheres), convertToKernel(cubes), convertToKernel(planes), convertToKernel(beziers));
     //cudaDeviceSynchronize();
@@ -219,7 +211,6 @@ int main(int argc, char **argv) {
     std::vector<Vector3> res = makeStdVector(gpu_out);
     releaseKernelArr(oil_painting.pt.mapped_image);
     releaseKernelArr(watercolor_texture.pt.mapped_image);
-    releaseKernelArr(bezier._ctrl_pnts); releaseKernelArr(bezier._coeff); releaseKernelArr(bezier._slices); releaseKernelArr(bezier._slices_param);
     releaseKernelArr(gpu_out);
     FILE *f = fopen("image.ppm", "w");
     fprintf(f, "P3\n%d %d\n%d\n", cam.w, cam.h, 255);
