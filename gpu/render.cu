@@ -152,8 +152,8 @@ int main(int argc, char **argv) {
 
     cv::Mat _oilpainting = cv::imread("../texture/oil_painting.png");
     cv::Mat _watercolor = cv::imread("../texture/watercolor.jpg");
-    auto &&oilpainting_arr = cvMat2FlatArr(_oilpainting);
-    auto &&watercolor_arr = cvMat2FlatArr(_watercolor);
+    cudaTextureObject_t oilpainting = cvMat2CudaTexture(_oilpainting);
+    cudaTextureObject_t watercolor = cvMat2CudaTexture(_watercolor);
     Texture_GPU oil_painting, watercolor_texture;
     oil_painting.pt.color = Vector3(.75, .75, .75);
     oil_painting.pt.emission = Vector3();
@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
     oil_painting.pt.probability = 0;
     oil_painting.pt.img_w = _oilpainting.cols;
     oil_painting.pt.img_h = _oilpainting.rows;
-    oil_painting.pt.mapped_image = makeKernelArr(oilpainting_arr);
+    oil_painting.pt.mapped_image = oilpainting;
     oil_painting.pt.mapped_transform = Transform2D(0, -2/450. , 2/600., 0, 2, 0);
     planes_.emplace_back(Plane_GPU(Vector3(1, 0, 0), 400, oil_painting));
     watercolor_texture.pt.color = Vector3(.9, .9, .5) * .999;
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
     watercolor_texture.pt.probability = 0;
     watercolor_texture.pt.img_w = _watercolor.cols;
     watercolor_texture.pt.img_h = _watercolor.rows;
-    watercolor_texture.pt.mapped_image = makeKernelArr(watercolor_arr);
+    watercolor_texture.pt.mapped_image = watercolor;
     watercolor_texture.pt.mapped_transform = Transform2D(1 / M_PI, 0, 0, .5 / M_PI, 0, 0.25);
     spheres_.emplace_back(Sphere_GPU(Vector3(280, 13, 103), 13, watercolor_texture));
 
@@ -209,8 +209,6 @@ int main(int argc, char **argv) {
                             (makeKernelArr(spheres_), makeKernelArr(cubes_), makeKernelArr(planes_), makeKernelArr(
                                     beziers_), cam, atoi(argv[1])/4, gpu_out);
     std::vector<Vector3> res = makeStdVector(gpu_out);
-    releaseKernelArr(oil_painting.pt.mapped_image);
-    releaseKernelArr(watercolor_texture.pt.mapped_image);
     releaseKernelArr(gpu_out);
     FILE *f = fopen("image.ppm", "w");
     fprintf(f, "P3\n%d %d\n%d\n", cam.w, cam.h, 255);

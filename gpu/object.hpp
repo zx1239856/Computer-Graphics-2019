@@ -14,14 +14,17 @@ struct TexturePT_GPU {
     Refl_t refl_1, refl_2;
     double probability; // probability of second REFL type
     double re_idx;
-    KernelArray<utils::Vector3> mapped_image = {._array = nullptr, ._size = 0};
+    cudaTextureObject_t mapped_image;
     int img_w = 0, img_h = 0;
     utils::Transform2D mapped_transform;
+    ~TexturePT_GPU() {
+        CUDA_SAFE_CALL(cudaDestroyTextureObject(mapped_image));
+    }
 
     __device__ pair<utils::Vector3, Refl_t>
 
     getColor(const utils::Point2D &surface_coord, curandState *state) const {
-        if (!mapped_image._size) // no texture mapping. use default color
+        if (!img_h || !img_w) // no texture mapping. use default color
         {
             if (curand_uniform_double(state) < probability)
                 return {color, refl_2};
@@ -32,10 +35,11 @@ struct TexturePT_GPU {
             utils::Point2D p = mapped_transform.transform(surface_coord);
             int u = (lround(w * p.y + .5) % w + w) % w, v =
                     (lround(h * p.x + .5) % h + h) % h;
-            auto color = mapped_image._array[v * w + u] / 255. * 0.999; // 8 bit per channel, so color is in [0, 255]
+            uchar4 cc = tex1Dfetch<uchar4>(mapped_image, v * w + u);
+            auto color = utils::Vector3(cc.x / 255. * 0.999, cc.y / 255. * 0.999, cc.z / 255. * 0.999); // 8 bit per channel, so color is in [0, 255]
             if (curand_uniform_double(state) < probability)
                 return {color, refl_2};
-            else if ((color.x() >= 235 || color.y() >= 235 || color.z() >= 235) && curand_uniform_double(state) < 0.13)
+            else if ((cc.x >= 235 || cc.y >= 235 || cc.z >= 235) && curand_uniform_double(state) < 0.13)
                 return {color, SPEC};
             else
                 return {color, refl_1};
