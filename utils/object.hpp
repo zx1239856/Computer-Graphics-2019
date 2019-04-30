@@ -91,7 +91,7 @@ struct TexturePT {
             auto color = mapped_image[v][u]; // 8 bit per channel, so color is in [0, 255]
             if (erand48(X) < probability)
                 return {color / 255. * 0.999, refl_2};
-            else if (color.x() >= 235 || color.y() >= 235 || color.z() >= 235)
+            else if ((color.x() >= 235 || color.y() >= 235 || color.z() >= 235) && erand48(X) < 0.13)
                 return {color / 255. * 0.999, SPEC};
             else
                 return {color / 255. * 0.999, refl_1};

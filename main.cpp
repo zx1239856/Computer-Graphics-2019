@@ -12,7 +12,7 @@ inline int toInt(double x) { return int(pow(clamp(x), 1 / 2.2) * 255 + .5); }
 
 int main(int argc, char **argv) {
     using namespace utils;
-    if (argc != 2)
+    if (argc != 4)
         return 0;
     Scene scene;
     scene.addObject(new Plane(Vector3(-1, 0, 0), 1, Vector3(.75, .25, .25), Vector3(), DIFF, 1.5)); //left
@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
                                       {20. / xscale, 80. / yscale}};
     watercolor_texture.pt.mapped_transform = utils::Transform2D(-1., 0, 0, .5/M_PI, 0, 0.25);
     scene.addObject(new RotaryBezier(Vector3(297, 3, 197), ctrl_pnts, watercolor_texture));
-    int w = 1920, h = 1080;
+    int w = atoi(argv[2]), h = atoi(argv[3]);
     Camera cam(w, h);
     cam.setPosition(Vector3(150, 30, 295.6), Vector3(0.35, -0.030612, -0.4).normalize());
     cam.setLensParam(0.5135, 0., 310);

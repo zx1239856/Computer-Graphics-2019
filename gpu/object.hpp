@@ -3,12 +3,11 @@
  * Objects changed for GPU code
  * Safe for bit-wise copy if mapped texture is not present
  */
-#include <nvfunctional>
+#include "cuda_helpers.h"
+#include "math_helpers.h"
 #include "../common/common.h"
 #include "../common/geometry.hpp"
 #include "../common/ray.hpp"
-#include "cuda_helpers.h"
-#include "math_helpers.h"
 #include "bezier.hpp"
 
 __device__ inline double intersectSphere(const Ray &ray, const utils::Vector3 &o, double r) {
@@ -82,13 +81,13 @@ struct TexturePT_GPU {
             utils::Point2D p = mapped_transform.transform(surface_coord);
             int u = (lround(w * p.y + .5) % w + w) % w, v =
                     (lround(h * p.x + .5) % h + h) % h;
-            auto color = mapped_image._array[v * w + u]; // 8 bit per channel, so color is in [0, 255]
+            auto color = mapped_image._array[v * w + u] / 255. * 0.999; // 8 bit per channel, so color is in [0, 255]
             if (curand_uniform_double(state) < probability)
-                return {color / 255. * 0.999, refl_2};
-            else if (color.x() >= 235 || color.y() >= 235 || color.z() >= 235)
-                return {color / 255. * 0.999, SPEC};
+                return {color, refl_2};
+            else if ((color.x() >= 235 || color.y() >= 235 || color.z() >= 235) && curand_uniform_double(state) < 0.13)
+                return {color, SPEC};
             else
-                return {color / 255. * 0.999, refl_1};
+                return {color, refl_1};
         }
     }
 };
@@ -286,7 +285,7 @@ struct RotaryBezier_GPU {
         return -1;
     }
 
-    __device__  void update_final_t(const Ray &ray, double t_, double &final_t, double &final_t_) const {
+    __device__ void update_final_t(const Ray &ray, double t_, double &final_t, double &final_t_) const {
         if (t_ < 0 || t_ > 1)
             return;
         auto hit = this->bezier.getPoint(t_);
@@ -313,7 +312,7 @@ struct RotaryBezier_GPU {
     __device__ triplet<utils::Vector3, double, utils::Point2D>
 
     intersect(const Ray &ray) const {
-        if (abs(ray.direction.y()) < EPSILON_3) { // light parallel to x-z plane
+        if (abs(ray.direction.y()) < 3e-3) { // light parallel to x-z plane
             double temp = utils::Vector3(axis.x() - ray.origin.x(), 0, axis.z() - ray.origin.z()).len();
             double initial_y = ray.getVector(temp).y();
             double t_ = horiz_ray_solver(initial_y - axis.y()); // y(t) = y_0

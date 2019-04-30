@@ -1,8 +1,7 @@
 #pragma once
-
+#include "cuda_helpers.h"
 #include "../common/common.h"
 #include "../common/geometry.hpp"
-#include "cuda_helpers.h"
 
 namespace utils {
     /*

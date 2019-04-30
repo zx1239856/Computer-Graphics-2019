@@ -130,37 +130,42 @@ __global__ void render_pt(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU>
 
 int main(int argc, char **argv) {
     using namespace utils;
-    if (argc != 2)
+    if (argc != 4)
         return 0;
     std::vector<Sphere_GPU> spheres_;
     spheres_.emplace_back(Sphere_GPU(Vector3(150, 1e5, 181.6), 1e5, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5));
     spheres_.emplace_back(
-            Sphere_GPU(Vector3(50, -1e5 + 381.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5));
-    spheres_.emplace_back(Sphere_GPU(Vector3(373, 16.5, 78), 16.5, Vector3(.9, .9, .5) * .999, Vector3(), REFR, 1.5));
-    spheres_.emplace_back(Sphere_GPU(Vector3(250, 981.6 - .63, 81.6), 600, Vector3(), Vector3(33, 33, 22), DIFF, 1.5));
+            Sphere_GPU(Vector3(50, -1e5 + 381.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5)); // top
+    spheres_.emplace_back(Sphere_GPU(Vector3(375, 16.5 + 8, 25), 16.5, Vector3(.9, .9, .75) * .999, Vector3(), REFR, 1.5));
+    spheres_.emplace_back(Sphere_GPU(Vector3(250, 1181.6 - .9, 81.6), 800, Vector3(), Vector3(50, 50, 50), DIFF, 1.5)); // top light
     std::vector<Cube_GPU> cubes_;
+    Texture_GPU lightcube;
+    lightcube.pt.re_idx = 1.3, lightcube.pt.color = Vector3(0.85, 0.85, 0.7), lightcube.pt.emission = Vector3(),
+    lightcube.pt.refl_1 = DIFF, lightcube.pt.refl_2 = REFR, lightcube.pt.probability = 0;
     cubes_.emplace_back(
-            Cube_GPU(Vector3(380, 40, 0), Vector3(395, 35, 100), Vector3(.15, .35, .55), Vector3(), DIFF, 1.3));
+            Cube_GPU(Vector3(350, 0, 0), Vector3(400, 8, 50), lightcube));
     std::vector<Plane_GPU> planes_;
-    planes_.emplace_back(Plane_GPU(Vector3(-1, 0, 0), 1, Vector3(.75, .25, .25), Vector3(), DIFF, 1.5));
-    planes_.emplace_back(Plane_GPU(Vector3(1, 0, 0), 399, Vector3(.25, .25, .75), Vector3(), DIFF, 1.5));
-    planes_.emplace_back(Plane_GPU(Vector3(0, 0, 1), 500, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5));
+    planes_.emplace_back(Plane_GPU(Vector3(-1, 0, 0), 1, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5));  // left
+    //planes_.emplace_back(Plane_GPU(Vector3(1, 0, 0), 400, Vector3(.25, .25, .75), Vector3(), DIFF, 1.5)); // right
+    planes_.emplace_back(Plane_GPU(Vector3(0, 0, 1), 500, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5));  // front
+    planes_.emplace_back(Plane_GPU(Vector3(0, 0, -1), 0, Vector3(.25, .5, .75), Vector3(), DIFF, 1.5)); // back
     std::vector<RotaryBezier_GPU> beziers_;
 
-    cv::Mat _grunge = cv::imread("../texture/b&w_grunge.png");
+    cv::Mat _oilpainting = cv::imread("../texture/oil_painting.png");
     cv::Mat _watercolor = cv::imread("../texture/watercolor.jpg");
-    auto &&grunge_arr = cvMat2FlatArr(_grunge);
+    auto &&oilpainting_arr = cvMat2FlatArr(_oilpainting);
     auto &&watercolor_arr = cvMat2FlatArr(_watercolor);
-    Texture_GPU grunge_texture, watercolor_texture;
-    grunge_texture.pt.color = Vector3(.75, .75, .75);
-    grunge_texture.pt.emission = Vector3();
-    grunge_texture.pt.re_idx = 1.5;
-    grunge_texture.pt.refl_1 = DIFF;
-    grunge_texture.pt.probability = 0;
-    grunge_texture.pt.img_w = _grunge.cols;
-    grunge_texture.pt.img_h = _grunge.rows;
-    grunge_texture.pt.mapped_image = makeKernelArr(grunge_arr);
-    grunge_texture.pt.mapped_transform = Transform2D(2, 0, 0, 2);
+    Texture_GPU oil_painting, watercolor_texture;
+    oil_painting.pt.color = Vector3(.75, .75, .75);
+    oil_painting.pt.emission = Vector3();
+    oil_painting.pt.re_idx = 1.5;
+    oil_painting.pt.refl_1 = DIFF;
+    oil_painting.pt.probability = 0;
+    oil_painting.pt.img_w = _oilpainting.cols;
+    oil_painting.pt.img_h = _oilpainting.rows;
+    oil_painting.pt.mapped_image = makeKernelArr(oilpainting_arr);
+    oil_painting.pt.mapped_transform = Transform2D(0, -2/450. , 2/600., 0, 2, 0);
+    planes_.emplace_back(Plane_GPU(Vector3(1, 0, 0), 400, oil_painting));
     watercolor_texture.pt.color = Vector3(.9, .9, .5) * .999;
     watercolor_texture.pt.emission = Vector3();
     watercolor_texture.pt.re_idx = 1.5;
@@ -170,9 +175,7 @@ int main(int argc, char **argv) {
     watercolor_texture.pt.img_h = _watercolor.rows;
     watercolor_texture.pt.mapped_image = makeKernelArr(watercolor_arr);
     watercolor_texture.pt.mapped_transform = Transform2D(1 / M_PI, 0, 0, .5 / M_PI, 0, 0.25);
-    spheres_.emplace_back(Sphere_GPU(Vector3(327, 20, 97), 20, watercolor_texture));
-    watercolor_texture.pt.mapped_transform = Transform2D(1e-3, 0, 0, 1e-3, 0, 0);
-    planes_.emplace_back(Plane_GPU(Vector3(0, 0, -1), 0, watercolor_texture));
+    spheres_.emplace_back(Sphere_GPU(Vector3(280, 13, 103), 13, watercolor_texture));
 
     double xscale = 2, yscale = 2;
     std::vector<Point2D> ctrl_pnts = {{0. / xscale, 0. / yscale},
@@ -201,8 +204,8 @@ int main(int argc, char **argv) {
 
     // camera params
     Camera cam = {
-            1920, 1080,
-            Vector3(150, 30, 295.6), Vector3(0.35, -0.030612, -0.4).normalize(),
+            atoi(argv[2]), atoi(argv[3]),
+            Vector3(150, 33, 295.6), Vector3(0.4, -0.030612, -0.35).normalize(),
             0.5135, 0., 310
     };
 
@@ -214,7 +217,7 @@ int main(int argc, char **argv) {
                             (makeKernelArr(spheres_), makeKernelArr(cubes_), makeKernelArr(planes_), makeKernelArr(
                                     beziers_), cam, atoi(argv[1])/4, gpu_out);
     std::vector<Vector3> res = makeStdVector(gpu_out);
-    releaseKernelArr(grunge_texture.pt.mapped_image);
+    releaseKernelArr(oil_painting.pt.mapped_image);
     releaseKernelArr(watercolor_texture.pt.mapped_image);
     releaseKernelArr(bezier._ctrl_pnts); releaseKernelArr(bezier._coeff); releaseKernelArr(bezier._slices); releaseKernelArr(bezier._slices_param);
     releaseKernelArr(gpu_out);
