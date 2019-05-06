@@ -9,7 +9,7 @@
 #include "../utils/bezier.hpp"
 
 
-struct TexturePT_GPU {
+struct Texture_GPU {
     utils::Vector3 color, emission;
     Refl_t refl_1, refl_2;
     double probability; // probability of second REFL type
@@ -17,7 +17,7 @@ struct TexturePT_GPU {
     cudaTextureObject_t mapped_image;
     int img_w = 0, img_h = 0;
     utils::Transform2D mapped_transform;
-    ~TexturePT_GPU() {
+    ~Texture_GPU() {
         CUDA_SAFE_CALL(cudaDestroyTextureObject(mapped_image));
     }
 
@@ -47,15 +47,6 @@ struct TexturePT_GPU {
     }
 };
 
-struct TexturePPM_GPU {
-    double placeholder; // TODO
-};
-
-struct Texture_GPU {
-    TexturePT_GPU pt;
-    TexturePPM_GPU ppm;
-};
-
 struct Sphere_GPU {
     utils::Vector3 origin;
     double radius;
@@ -69,8 +60,8 @@ struct Sphere_GPU {
 
     Sphere_GPU(const utils::Vector3 &o, double r, const utils::Vector3 &_color, const utils::Vector3 &_emission,
                Refl_t _refl, double _re_idx) : origin(o), radius(r) {
-        texture.pt.color = _color, texture.pt.emission = _emission, texture.pt.refl_1 = _refl,
-        texture.pt.re_idx = _re_idx, texture.pt.probability = 0;
+        texture.color = _color, texture.emission = _emission, texture.refl_1 = _refl,
+        texture.re_idx = _re_idx, texture.probability = 0;
     }
 
     __device__ triplet<utils::Vector3, double, utils::Point2D>
@@ -109,8 +100,8 @@ struct Plane_GPU {
 
     Plane_GPU(const utils::Vector3 &norm, double dis, const utils::Vector3 &color, const utils::Vector3 &emission,
               Refl_t refl, double re_idx) : n(norm.normalize()), d(dis) {
-        texture.pt.color = color, texture.pt.emission = emission, texture.pt.refl_1 = refl,
-        texture.pt.re_idx = re_idx, texture.pt.probability = 0;
+        texture.color = color, texture.emission = emission, texture.refl_1 = refl,
+        texture.re_idx = re_idx, texture.probability = 0;
         preparePlaneObject(n, d, xp, yp, origin);
     }
 
@@ -148,8 +139,8 @@ struct Cube_GPU {
     Cube_GPU(const utils::Vector3 &_p0, const utils::Vector3 &_p1, const utils::Vector3 &color,
              const utils::Vector3 &emission,
              Refl_t refl, double re_idx) : p0(min(_p0, _p1)), p1(max(_p0, _p1)) {
-        texture.pt.color = color, texture.pt.emission = emission, texture.pt.refl_1 = refl,
-        texture.pt.re_idx = re_idx, texture.pt.probability = 0;
+        texture.color = color, texture.emission = emission, texture.refl_1 = refl,
+        texture.re_idx = re_idx, texture.probability = 0;
     }
 
     __device__ triplet<utils::Vector3, double, utils::Point2D>
@@ -188,8 +179,8 @@ struct RotaryBezier_GPU {
     RotaryBezier_GPU(const utils::Vector3 &_axis, const utils::Bezier2D_GPU &_bezier, const utils::Vector3 &color,
                      const utils::Vector3 &emission,
                      Refl_t refl, double re_idx) : axis(_axis), bezier(_bezier) {
-        texture.pt.color = color, texture.pt.emission = emission, texture.pt.refl_1 = refl,
-        texture.pt.re_idx = re_idx, texture.pt.probability = 0;
+        texture.color = color, texture.emission = emission, texture.refl_1 = refl,
+        texture.re_idx = re_idx, texture.probability = 0;
     }
 
     __device__ triplet<utils::Vector3, double, utils::Point2D>

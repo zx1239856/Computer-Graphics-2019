@@ -33,8 +33,8 @@ radiance(KernelArray<Sphere_GPU> &spheres, KernelArray<Cube_GPU> &cubes, KernelA
                                         r);  // triplet<utils::Vector3, double, pair<utils::Point2D, Texture_GPU*>>
         if (res.second >= INF || res.second < 0)
             return L;
-        auto &&prop = res.third.second->pt.getColor(res.third.first, state); // color, refl_t
-        L += F.mult(res.third.second->pt.emission);
+        auto &&prop = res.third.second->getColor(res.third.first, state); // color, refl_t
+        L += F.mult(res.third.second->emission);
         F = F.mult(prop.first);
         double p = prop.first.max();
         if (++depth > 5) {
@@ -49,14 +49,14 @@ radiance(KernelArray<Sphere_GPU> &spheres, KernelArray<Cube_GPU> &cubes, KernelA
 
         switch (prop.second) {
             case REFR: {
-                utils::Vector3 d = r.direction.refract(res.first, into ? 1 : res.third.second->pt.re_idx,
-                                                into ? res.third.second->pt.re_idx : 1);
+                utils::Vector3 d = r.direction.refract(res.first, into ? 1 : res.third.second->re_idx,
+                                                into ? res.third.second->re_idx : 1);
                 if (d.len2() < EPSILON) // total internal reflection
                 {
                     r = reflray;
                     continue;
                 }
-                double a = res.third.second->pt.re_idx - 1, b = res.third.second->pt.re_idx + 1, R0 = a * a / (b * b), c =
+                double a = res.third.second->re_idx - 1, b = res.third.second->re_idx + 1, R0 = a * a / (b * b), c =
                         1 - (into ? -r.direction.dot(nl) : d.dot(res.first));
                 double Re = R0 + (1 - R0) * c * c * c * c * c, Tr = 1 - Re, P = .25 + .5 * Re, RP = Re / P, TP =
                         Tr / (1 - P);
@@ -131,6 +131,7 @@ int main(int argc, char **argv) {
     using namespace utils;
     if (argc != 4)
         return 0;
+    printDeviceProperty();
     std::vector<Sphere_GPU> spheres_;
     spheres_.emplace_back(Sphere_GPU(Vector3(150, 1e5, 181.6), 1e5, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5));
     spheres_.emplace_back(
@@ -139,8 +140,8 @@ int main(int argc, char **argv) {
     spheres_.emplace_back(Sphere_GPU(Vector3(250, 1181.6 - .9, 81.6), 800, Vector3(), Vector3(50, 50, 50), DIFF, 1.5)); // top light
     std::vector<Cube_GPU> cubes_;
     Texture_GPU lightcube;
-    lightcube.pt.re_idx = 1.3, lightcube.pt.color = Vector3(0.85, 0.85, 0.7), lightcube.pt.emission = Vector3(),
-    lightcube.pt.refl_1 = DIFF, lightcube.pt.refl_2 = REFR, lightcube.pt.probability = 0;
+    lightcube.re_idx = 1.3, lightcube.color = Vector3(0.85, 0.85, 0.7), lightcube.emission = Vector3(),
+    lightcube.refl_1 = DIFF, lightcube.refl_2 = REFR, lightcube.probability = 0;
     cubes_.emplace_back(
             Cube_GPU(Vector3(350, 0, 0), Vector3(400, 8, 50), lightcube));
     std::vector<Plane_GPU> planes_;
@@ -155,25 +156,25 @@ int main(int argc, char **argv) {
     cudaTextureObject_t oilpainting = cvMat2CudaTexture(_oilpainting);
     cudaTextureObject_t watercolor = cvMat2CudaTexture(_watercolor);
     Texture_GPU oil_painting, watercolor_texture;
-    oil_painting.pt.color = Vector3(.75, .75, .75);
-    oil_painting.pt.emission = Vector3();
-    oil_painting.pt.re_idx = 1.5;
-    oil_painting.pt.refl_1 = DIFF;
-    oil_painting.pt.probability = 0;
-    oil_painting.pt.img_w = _oilpainting.cols;
-    oil_painting.pt.img_h = _oilpainting.rows;
-    oil_painting.pt.mapped_image = oilpainting;
-    oil_painting.pt.mapped_transform = Transform2D(0, -2/450. , 2/600., 0, 2, 0);
+    oil_painting.color = Vector3(.75, .75, .75);
+    oil_painting.emission = Vector3();
+    oil_painting.re_idx = 1.5;
+    oil_painting.refl_1 = DIFF;
+    oil_painting.probability = 0;
+    oil_painting.img_w = _oilpainting.cols;
+    oil_painting.img_h = _oilpainting.rows;
+    oil_painting.mapped_image = oilpainting;
+    oil_painting.mapped_transform = Transform2D(0, -2/450. , 2/600., 0, 2, 0);
     planes_.emplace_back(Plane_GPU(Vector3(1, 0, 0), 400, oil_painting));
-    watercolor_texture.pt.color = Vector3(.9, .9, .5) * .999;
-    watercolor_texture.pt.emission = Vector3();
-    watercolor_texture.pt.re_idx = 1.5;
-    watercolor_texture.pt.refl_1 = DIFF;
-    watercolor_texture.pt.probability = 0;
-    watercolor_texture.pt.img_w = _watercolor.cols;
-    watercolor_texture.pt.img_h = _watercolor.rows;
-    watercolor_texture.pt.mapped_image = watercolor;
-    watercolor_texture.pt.mapped_transform = Transform2D(1 / M_PI, 0, 0, .5 / M_PI, 0, 0.25);
+    watercolor_texture.color = Vector3(.9, .9, .5) * .999;
+    watercolor_texture.emission = Vector3();
+    watercolor_texture.re_idx = 1.5;
+    watercolor_texture.refl_1 = DIFF;
+    watercolor_texture.probability = 0;
+    watercolor_texture.img_w = _watercolor.cols;
+    watercolor_texture.img_h = _watercolor.rows;
+    watercolor_texture.mapped_image = watercolor;
+    watercolor_texture.mapped_transform = Transform2D(1 / M_PI, 0, 0, .5 / M_PI, 0, 0.25);
     spheres_.emplace_back(Sphere_GPU(Vector3(280, 13, 103), 13, watercolor_texture));
 
     double xscale = 2, yscale = 2;
@@ -188,7 +189,7 @@ int main(int argc, char **argv) {
                                       {20. / xscale, 80. / yscale}};
     Bezier2D cpu_bezier(ctrl_pnts);
 
-    watercolor_texture.pt.mapped_transform = Transform2D(-1., 0, 0, .5 / M_PI, 0, 0.25);
+    watercolor_texture.mapped_transform = Transform2D(-1., 0, 0, .5 / M_PI, 0, 0.25);
     beziers_.emplace_back(RotaryBezier_GPU(Vector3(297, 3, 197), cpu_bezier.toGPU(), watercolor_texture));
 
     //debug_kernel<<<1,1>>>(convertToKernel(spheres), convertToKernel(cubes), convertToKernel(planes), convertToKernel(beziers));
@@ -205,6 +206,7 @@ int main(int argc, char **argv) {
     const dim3 nblocks(cam.w / 16u, cam.h / 16u);
     const dim3 nthreads(16u, 16u);
     KernelArray<utils::Vector3> gpu_out = createKernelArr<utils::Vector3>(static_cast<size_t>(cam.w * cam.h));
+    printf("Memory copied to GPU, now start executing render kernel...\n");
     render_pt << < nblocks, nthreads >> >
                             (makeKernelArr(spheres_), makeKernelArr(cubes_), makeKernelArr(planes_), makeKernelArr(
                                     beziers_), cam, atoi(argv[1])/4, gpu_out);

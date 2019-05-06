@@ -11,7 +11,7 @@
  * Common intersections(sphere, axis-aligned cubes)
  */
 
-struct TexturePT {
+struct Texture {
     utils::Vector3 color, emission;
     Refl_t refl_1, refl_2;
     double probability; // probability of second REFL type
@@ -19,10 +19,10 @@ struct TexturePT {
     std::vector<std::vector<utils::Vector3>> mapped_image;
     utils::Transform2D mapped_transform;
 
-    TexturePT(const utils::Vector3 &_color, const utils::Vector3 &_emission, Refl_t _refl, double _re_idx) :
+    Texture(const utils::Vector3 &_color, const utils::Vector3 &_emission, Refl_t _refl, double _re_idx) :
             color(_color), emission(_emission), refl_1(_refl), refl_2(DIFF), probability(0), re_idx(_re_idx) {}
 
-    TexturePT(const utils::Vector3 &_color, const utils::Vector3 &_emission, Refl_t _refl_1, Refl_t _refl_2,
+    Texture(const utils::Vector3 &_color, const utils::Vector3 &_emission, Refl_t _refl_1, Refl_t _refl_2,
               double _prob, double _re_idx) :
             color(_color), emission(_emission), refl_1(_refl_1), refl_2(_refl_2), probability(_prob), re_idx(_re_idx) {}
 
@@ -47,24 +47,6 @@ struct TexturePT {
                 return {color / 255. * 0.999, refl_1};
         }
     }
-};
-
-struct TexturePPM {
-    double placeholder; // TODO
-};
-
-struct Texture {
-    TexturePT pt;
-    TexturePPM ppm;
-
-    Texture(const utils::Vector3 &_color, const utils::Vector3 &_emission, Refl_t _refl, double _re_idx) :
-            pt(_color, _emission, _refl, _re_idx) {}
-
-    Texture(const utils::Vector3 &_color, const utils::Vector3 &_emission, Refl_t _refl_1, Refl_t _refl_2, double prob,
-            double _re_idx) :
-            pt(_color, _emission, _refl_1, _refl_2, prob, _re_idx) {}
-
-    Texture(const TexturePT &_pt) : pt(_pt) {}
 };
 
 /*
