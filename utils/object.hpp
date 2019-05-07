@@ -13,38 +13,54 @@
 
 struct Texture {
     utils::Vector3 color, emission;
-    Refl_t refl_1, refl_2;
-    double probability; // probability of second REFL type
+    double specular, diffuse, refraction;
+    double rho_d, rho_s, phong_s;
     double re_idx;
     std::vector<std::vector<utils::Vector3>> mapped_image;
     utils::Transform2D mapped_transform;
 
-    Texture(const utils::Vector3 &_color, const utils::Vector3 &_emission, Refl_t _refl, double _re_idx) :
-            color(_color), emission(_emission), refl_1(_refl), refl_2(DIFF), probability(0), re_idx(_re_idx) {}
+    Texture(const utils::Vector3 &_color, const utils::Vector3 &_emission, double _specular, double _diffuse,
+            double _refraction, double _rho_d, double _rho_s, double _phong_s, double _re_idx) :
+            color(_color), emission(_emission), specular(_specular), diffuse(_diffuse), refraction(_refraction),
+            rho_d(_rho_d), rho_s(_rho_s), phong_s(_phong_s), re_idx(_re_idx) {
+        // normalization
+        double s = specular + diffuse + refraction;
+        specular /= s, diffuse /= s, refraction /= s;
+        diffuse += specular;
+        refraction += diffuse;
+        s = rho_s + rho_d;
+        rho_s /= s, rho_d /= s;
+        rho_d += rho_s;
+    }
 
-    Texture(const utils::Vector3 &_color, const utils::Vector3 &_emission, Refl_t _refl_1, Refl_t _refl_2,
-              double _prob, double _re_idx) :
-            color(_color), emission(_emission), refl_1(_refl_1), refl_2(_refl_2), probability(_prob), re_idx(_re_idx) {}
+    Texture(const utils::Vector3 &_color, const utils::Vector3 &_emission, const BRDF &brdf) :
+            Texture(_color, _emission, brdf.specular, brdf.diffuse, brdf.refraction, brdf.rho_d, brdf.rho_s,
+                    brdf.phong_s, brdf.re_idx) {}
 
     std::pair<utils::Vector3, Refl_t> getColor(const utils::Point2D &surface_coord, unsigned short X[3]) const {
+        double prob = erand48(X);
         if (!mapped_image.size()) // no texture mapping. use default color
         {
-            if (erand48(X) < probability)
-                return {color, refl_2};
+            if (prob < specular)
+                return {color, SPEC};
+            else if (prob < diffuse)
+                return {color, DIFF};
             else
-                return {color, refl_1};
+                return {color, REFR};
         } else {
             const int &w = mapped_image[0].size(), &h = mapped_image.size();
             utils::Point2D p = mapped_transform.transform(surface_coord);
             int u = (lround(w * p.y + .5) % w + w) % w, v =
                     (lround(h * p.x + .5) % h + h) % h;
             auto color = mapped_image[v][u]; // 8 bit per channel, so color is in [0, 255]
-            if (erand48(X) < probability)
-                return {color / 255. * 0.999, refl_2};
-            else if ((color.x() >= 235 || color.y() >= 235 || color.z() >= 235) && erand48(X) < 0.13)
+            if (prob < specular)
                 return {color / 255. * 0.999, SPEC};
-            else
-                return {color / 255. * 0.999, refl_1};
+            else if (prob < diffuse) {
+                if ((color.x() >= 235 || color.y() >= 235 || color.z() >= 235) && erand48(X) < 0.13)
+                    return {color / 255. * 0.999, SPEC};
+                else return {color / 255. * 0.999, DIFF};
+            } else
+                return {color / 255. * 0.999, REFR};
         }
     }
 };
@@ -57,8 +73,8 @@ class BasicObject {
 public:
     Texture texture;
 
-    BasicObject(const utils::Vector3 &color, const utils::Vector3 &emission, Refl_t refl, double re_idx) :
-            texture(color, emission, refl, re_idx) {}
+    BasicObject(const utils::Vector3 &color, const utils::Vector3 &emission, const BRDF &brdf) :
+            texture(color, emission, brdf) {}
 
     BasicObject(const Texture &t) : texture(t) {}
 
@@ -78,9 +94,10 @@ class Sphere : public BasicObject {
 public:
     Sphere(const utils::Vector3 &o, double r, const Texture &t) : BasicObject(t), origin(o), radius(r) {}
 
-    Sphere(const utils::Vector3 &o, double r, const utils::Vector3 &_color, const utils::Vector3 &_emission,
-           Refl_t _refl, double _re_idx) :
-            BasicObject(_color, _emission, _refl, _re_idx), origin(o), radius(r) {}
+    Sphere(const utils::Vector3 &o, double r, const utils::Vector3 &color, const utils::Vector3 &emission,
+           const BRDF &brdf) :
+            BasicObject(color, emission, brdf), origin(o),
+            radius(r) {}
 
     virtual std::tuple<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const override {
         auto &&val = intersectSphereObject(ray, origin, radius);
@@ -110,8 +127,9 @@ public:
     }
 
     Plane(const utils::Vector3 &norm, double dis, const utils::Vector3 &color, const utils::Vector3 &emission,
-          Refl_t refl, double re_idx) :
-            BasicObject(color, emission, refl, re_idx), n(norm.normalize()), d(dis) {
+          const BRDF &brdf) :
+            BasicObject(color, emission, brdf),
+            n(norm.normalize()), d(dis) {
         preparePlaneObject(n, d, xp, yp, origin);
     }
 
@@ -138,9 +156,9 @@ public:
                                                                                    p1(max(_p0, _p1)) {}
 
     Cube(const utils::Vector3 &_p0, const utils::Vector3 &_p1, const utils::Vector3 &color,
-         const utils::Vector3 &emission,
-         Refl_t refl, double re_idx) :
-            BasicObject(color, emission, refl, re_idx), p0(min(_p0, _p1)), p1(max(_p0, _p1)) {}
+         const utils::Vector3 &emission, const BRDF &brdf) :
+            BasicObject(color, emission, brdf),
+            p0(min(_p0, _p1)), p1(max(_p0, _p1)) {}
 
     virtual std::tuple<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const override {
         double t = intersectAABB(ray, p0, p1);
@@ -167,13 +185,13 @@ public:
             BasicObject(t), axis(_axis), bezier(_bezier) {}
 
     RotaryBezier(const utils::Vector3 &_axis, const utils::Bezier2D &_bezier, const utils::Vector3 &color,
-                 const utils::Vector3 &emission,
-                 Refl_t refl, double re_idx) :
-            BasicObject(color, emission, refl, re_idx), axis(_axis), bezier(_bezier) {}
+                 const utils::Vector3 &emission, const BRDF &brdf) :
+            BasicObject(color, emission, brdf), axis(_axis),
+            bezier(_bezier) {}
 
     virtual std::tuple<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const override {
-        auto && bb = boundingBox();
-        auto && x = intersectBezierObject(ray, axis, bezier, bb.first, bb.second);
+        auto &&bb = boundingBox();
+        auto &&x = intersectBezierObject(ray, axis, bezier, bb.first, bb.second);
         return {x.first, x.second, x.third};
     }
 

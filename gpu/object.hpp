@@ -11,8 +11,8 @@
 
 struct Texture_GPU {
     utils::Vector3 color, emission;
-    Refl_t refl_1, refl_2;
-    double probability; // probability of second REFL type
+    double specular, diffuse, refraction;
+    double rho_d, rho_s, phong_s;
     double re_idx;
     cudaTextureObject_t mapped_image;
     int img_w = 0, img_h = 0;
@@ -21,15 +21,31 @@ struct Texture_GPU {
         CUDA_SAFE_CALL(cudaDestroyTextureObject(mapped_image));
     }
 
+    __host__ void setBRDF(const BRDF &brdf) {
+        specular = brdf.specular, diffuse = brdf.diffuse, refraction = brdf.refraction,
+        rho_d = brdf.rho_d, rho_s = brdf.rho_s, phong_s = brdf.phong_s, re_idx = brdf.re_idx;
+        // normalization
+        double s = specular + diffuse + refraction;
+        specular /= s, diffuse /= s, refraction /= s;
+        diffuse += specular;
+        refraction += diffuse;
+        s = rho_s + rho_d;
+        rho_s /= s, rho_d /= s;
+        rho_d += rho_s;
+    }
+
     __device__ pair<utils::Vector3, Refl_t>
 
     getColor(const utils::Point2D &surface_coord, curandState *state) const {
+        double prob = curand_uniform_double(state);
         if (!img_h || !img_w) // no texture mapping. use default color
         {
-            if (curand_uniform_double(state) < probability)
-                return {color, refl_2};
+            if (prob < specular)
+                return {color, SPEC};
+            else if (prob < diffuse)
+                return {color, DIFF};
             else
-                return {color, refl_1};
+                return {color, REFR};
         } else {
             const int &w = img_w, &h = img_h;
             utils::Point2D p = mapped_transform.transform(surface_coord);
@@ -37,12 +53,14 @@ struct Texture_GPU {
                     (lround(h * p.x + .5) % h + h) % h;
             uchar4 cc = tex1Dfetch<uchar4>(mapped_image, v * w + u);
             auto color = utils::Vector3(cc.x / 255. * 0.999, cc.y / 255. * 0.999, cc.z / 255. * 0.999); // 8 bit per channel, so color is in [0, 255]
-            if (curand_uniform_double(state) < probability)
-                return {color, refl_2};
-            else if ((cc.x >= 235 || cc.y >= 235 || cc.z >= 235) && curand_uniform_double(state) < 0.13)
+            if (prob < specular)
                 return {color, SPEC};
-            else
-                return {color, refl_1};
+            else if (prob < diffuse) {
+                if ((cc.x >= 235 || cc.y >= 235 || cc.z >= 235) && curand_uniform_double(state) < 0.13)
+                    return {color, SPEC};
+                else return {color, DIFF};
+            } else
+                return {color, REFR};
         }
     }
 };
@@ -58,10 +76,10 @@ struct Sphere_GPU {
 
     __host__ __device__
 
-    Sphere_GPU(const utils::Vector3 &o, double r, const utils::Vector3 &_color, const utils::Vector3 &_emission,
-               Refl_t _refl, double _re_idx) : origin(o), radius(r) {
-        texture.color = _color, texture.emission = _emission, texture.refl_1 = _refl,
-        texture.re_idx = _re_idx, texture.probability = 0;
+    Sphere_GPU(const utils::Vector3 &o, double r, const utils::Vector3 &_color, const utils::Vector3 &_emission, const BRDF &brdf) : origin(o), radius(r) {
+        texture.color = _color, texture.emission = _emission, texture.specular = brdf.specular,
+        texture.diffuse = brdf.diffuse, texture.refraction = brdf.refraction, texture.rho_d = brdf.rho_d,
+        texture.rho_s = brdf.rho_s, texture.phong_s = brdf.phong_s, texture.re_idx = brdf.re_idx;
     }
 
     __device__ triplet<utils::Vector3, double, utils::Point2D>
@@ -99,9 +117,10 @@ struct Plane_GPU {
     __host__ __device__
 
     Plane_GPU(const utils::Vector3 &norm, double dis, const utils::Vector3 &color, const utils::Vector3 &emission,
-              Refl_t refl, double re_idx) : n(norm.normalize()), d(dis) {
-        texture.color = color, texture.emission = emission, texture.refl_1 = refl,
-        texture.re_idx = re_idx, texture.probability = 0;
+              const BRDF &brdf) : n(norm.normalize()), d(dis) {
+        texture.color = color, texture.emission = emission, texture.specular = brdf.specular,
+        texture.diffuse = brdf.diffuse, texture.refraction = brdf.refraction, texture.rho_d = brdf.rho_d,
+        texture.rho_s = brdf.rho_s, texture.phong_s = brdf.phong_s, texture.re_idx = brdf.re_idx;
         preparePlaneObject(n, d, xp, yp, origin);
     }
 
@@ -138,9 +157,10 @@ struct Cube_GPU {
 
     Cube_GPU(const utils::Vector3 &_p0, const utils::Vector3 &_p1, const utils::Vector3 &color,
              const utils::Vector3 &emission,
-             Refl_t refl, double re_idx) : p0(min(_p0, _p1)), p1(max(_p0, _p1)) {
-        texture.color = color, texture.emission = emission, texture.refl_1 = refl,
-        texture.re_idx = re_idx, texture.probability = 0;
+             const BRDF &brdf) : p0(min(_p0, _p1)), p1(max(_p0, _p1)) {
+        texture.color = color, texture.emission = emission, texture.specular = brdf.specular,
+        texture.diffuse = brdf.diffuse, texture.refraction = brdf.refraction, texture.rho_d = brdf.rho_d,
+        texture.rho_s = brdf.rho_s, texture.phong_s = brdf.phong_s, texture.re_idx = brdf.re_idx;
     }
 
     __device__ triplet<utils::Vector3, double, utils::Point2D>
@@ -178,9 +198,10 @@ struct RotaryBezier_GPU {
 
     RotaryBezier_GPU(const utils::Vector3 &_axis, const utils::Bezier2D_GPU &_bezier, const utils::Vector3 &color,
                      const utils::Vector3 &emission,
-                     Refl_t refl, double re_idx) : axis(_axis), bezier(_bezier) {
-        texture.color = color, texture.emission = emission, texture.refl_1 = refl,
-        texture.re_idx = re_idx, texture.probability = 0;
+                     const BRDF &brdf) : axis(_axis), bezier(_bezier) {
+        texture.color = color, texture.emission = emission, texture.specular = brdf.specular,
+        texture.diffuse = brdf.diffuse, texture.refraction = brdf.refraction, texture.rho_d = brdf.rho_d,
+        texture.rho_s = brdf.rho_s, texture.phong_s = brdf.phong_s, texture.re_idx = brdf.re_idx;
     }
 
     __device__ triplet<utils::Vector3, double, utils::Point2D>

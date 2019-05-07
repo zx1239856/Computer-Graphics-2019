@@ -15,21 +15,21 @@ int main(int argc, char **argv) {
     if (argc != 4)
         return 0;
     Scene scene;
-    scene.addObject(new Plane(Vector3(-1, 0, 0), 1, Vector3(.75, .25, .25), Vector3(), DIFF, 1.5)); //left
-    scene.addObject(new Plane(Vector3(1, 0, 0), 399, Vector3(.25, .25, .75), Vector3(), DIFF, 1.5)); // right
-    scene.addObject(new Cube(Vector3(380, 40, 0), Vector3(395, 35, 100), Vector3(.15, .35, .55), Vector3(), DIFF, 1.3));
-    scene.addObject(new Plane(Vector3(0, 0, 1), 500, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5)); //front
-    scene.addObject(new Sphere(Vector3(150, 1e5, 181.6), 1e5, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5)); //bottom
+    scene.addObject(new Plane(Vector3(-1, 0, 0), 1, Vector3(.75, .25, .25), Vector3(), BRDFs[WALL])); //left
+    scene.addObject(new Plane(Vector3(1, 0, 0), 399, Vector3(.25, .25, .75), Vector3(), BRDFs[WALL])); // right
+    scene.addObject(new Cube(Vector3(380, 40, 0), Vector3(395, 35, 100), Vector3(.15, .35, .55), Vector3(), BRDFs[DIFFUSE]));
+    scene.addObject(new Plane(Vector3(0, 0, 1), 500, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); //front
+    scene.addObject(new Sphere(Vector3(150, 1e5, 181.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); //bottom
     scene.addObject(
-            new Sphere(Vector3(50, -1e5 + 381.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), DIFF, 1.5)); //top
-    scene.addObject(new Sphere(Vector3(373, 16.5, 78), 16.5, Vector3(.9, .9, .5) * .999, Vector3(), REFR, 1.5));
-    scene.addObject(new Sphere(Vector3(250, 981.6 - .63, 81.6), 600, Vector3(), Vector3(33, 33, 22), DIFF, 1.5));
+            new Sphere(Vector3(50, -1e5 + 381.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); //top
+    scene.addObject(new Sphere(Vector3(373, 16.5, 78), 16.5, Vector3(.9, .9, .5) * .999, Vector3(), BRDFs[GLASS]));
+    scene.addObject(new Sphere(Vector3(250, 981.6 - .63, 81.6), 600, Vector3(), Vector3(33, 33, 22), BRDFs[LIGHT])); // light
     //scene.addObject(new Cube(Vector3(267, 30, 167), Vector3(327, 30.5, 227), Vector3(.75, .75, .75), Vector3(), DIFF, 1.5));
 
     cv::Mat _grunge = cv::imread("../texture/b&w_grunge.png");
     cv::Mat _watercolor = cv::imread("../texture/watercolor.jpg");
-    Texture grunge_texture(Vector3(.75, .75, .75), Vector3(), DIFF, 1.5);
-    Texture watercolor_texture(Vector3(.9, .9, .5) * .999, Vector3(), DIFF, 1.5);
+    Texture grunge_texture(Vector3(.75, .75, .75), Vector3(), BRDFs[DIFF]);
+    Texture watercolor_texture(Vector3(.9, .9, .5) * .999, Vector3(), BRDFs[DIFF]);
     grunge_texture.mapped_image = cvMat2Arr(_grunge);
     grunge_texture.mapped_transform = utils::Transform2D(1e-3, 0, 0, 1e-3);
     watercolor_texture.mapped_image = cvMat2Arr(_watercolor);
