@@ -51,7 +51,7 @@ int main() {
                  {15. / xscale, 70. / yscale},
                  {30. / xscale, 80. / yscale}};
     auto bezier_3d = RotaryBezier(utils::Vector3(297, 3, 197), ctrl_pnts, utils::Vector3(.75, .25, .75),
-                                  utils::Vector3(), DIFF, 1.5);
+                                  utils::Vector3(), BRDFs[DIFFUSE]);
     auto intersect = bezier_3d.intersect(
             Ray(utils::Vector3(25, 9.3, 20), utils::Vector3(-1, -0.21, 0.002).normalize()));
     auto norm = bezier_3d.norm(utils::Vector3(), std::get<2>(intersect));

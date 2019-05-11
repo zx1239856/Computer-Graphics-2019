@@ -28,8 +28,8 @@ int main(int argc, char **argv) {
 
     cv::Mat _grunge = cv::imread("../texture/b&w_grunge.png");
     cv::Mat _watercolor = cv::imread("../texture/watercolor.jpg");
-    Texture grunge_texture(Vector3(.75, .75, .75), Vector3(), BRDFs[DIFF]);
-    Texture watercolor_texture(Vector3(.9, .9, .5) * .999, Vector3(), BRDFs[DIFF]);
+    Texture grunge_texture(Vector3(.75, .75, .75), Vector3(), BRDFs[DIFFUSE]);
+    Texture watercolor_texture(Vector3(.9, .9, .5) * .999, Vector3(), BRDFs[DIFFUSE]);
     grunge_texture.mapped_image = cvMat2Arr(_grunge);
     grunge_texture.mapped_transform = utils::Transform2D(1e-3, 0, 0, 1e-3);
     watercolor_texture.mapped_image = cvMat2Arr(_watercolor);
