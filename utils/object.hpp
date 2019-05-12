@@ -6,6 +6,8 @@
 #include <cmath>
 #include "bezier.hpp"
 #include "../common/simple_intersect_algs.hpp"
+#include "../common/kdtree.hpp"
+
 
 /*
  * Common intersections(sphere, axis-aligned cubes)
@@ -101,7 +103,7 @@ public:
 
     virtual std::tuple<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const override {
         auto &&val = intersectSphereObject(ray, origin, radius);
-        return {val.first, val.second, val.third};
+        return {norm(val.first), val.second, val.third};
     }
 
     virtual std::pair<utils::Vector3, utils::Vector3> boundingBox() const override {
@@ -110,7 +112,7 @@ public:
 
     virtual utils::Vector3
     norm(const utils::Vector3 &vec, const utils::Point2D &unused = utils::Point2D(0, 0)) const override {
-        assert(std::abs((vec - origin).len() - radius) < EPSILON);
+        //assert(std::abs((vec - origin).len() - radius) < EPSILON);
         return (vec - origin).normalize();
     }
 };
@@ -135,7 +137,7 @@ public:
 
     std::tuple<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const override {
         auto &&x = intersectPlaneObject(ray, n, d, origin, xp, yp);
-        return {x.first, x.second, x.third};
+        return {norm(), x.second, x.third};
     }
 
     virtual std::pair<utils::Vector3, utils::Vector3> boundingBox() const override {
@@ -162,7 +164,7 @@ public:
 
     virtual std::tuple<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const override {
         double t = intersectAABB(ray, p0, p1);
-        return {ray.getVector(t), t, utils::Point2D(0, 0)}; // surface coordinate not available for cube
+        return {norm(ray.getVector(t)), t, utils::Point2D(0, 0)}; // surface coordinate not available for cube
     }
 
     virtual std::pair<utils::Vector3, utils::Vector3> boundingBox() const override {
@@ -192,7 +194,7 @@ public:
     virtual std::tuple<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const override {
         auto &&bb = boundingBox();
         auto &&x = intersectBezierObject(ray, axis, bezier, bb.first, bb.second);
-        return {x.first, x.second, x.third};
+        return {norm(x.first, x.third), x.second, x.third};
     }
 
     virtual std::pair<utils::Vector3, utils::Vector3> boundingBox() const override {
@@ -204,5 +206,51 @@ public:
 
     virtual utils::Vector3 norm(const utils::Vector3 &vec, const utils::Point2D &surface_coord) const override {
         return normOfBezier(vec, surface_coord, bezier);
+    }
+};
+
+class TriangleMeshObject : public BasicObject {
+    KDTree kd_tree;
+    utils::Vector3 pos;
+    double ratio;
+public:
+    TriangleMeshObject(const utils::Vector3 &pos_, double ratio_, const std::vector<utils::Vector3> &vertices,
+                       const std::vector<TriangleFace> &faces, const std::vector<utils::Vector3> &norms,
+                       const Texture &t) :
+            BasicObject(t), kd_tree(vertices, faces, norms), pos(pos_), ratio(ratio_) {}
+
+    TriangleMeshObject(const utils::Vector3 &pos_, double ratio_, const std::vector<utils::Vector3> &vertices,
+                       const std::vector<TriangleFace> &faces, const std::vector<utils::Vector3> &norms,
+                       const utils::Vector3 &color,
+                       const utils::Vector3 &emission, const BRDF &brdf) :
+            BasicObject(color, emission, brdf), kd_tree(vertices, faces, norms), pos(pos_), ratio(ratio_) {}
+
+    virtual std::tuple<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const override {
+        auto r = ray;
+        r.origin = (r.origin - pos) / ratio;
+        auto res = kd_tree.intersect(r);
+        if(res.first >= INF)
+            return {utils::Vector3(), INF, utils::Point2D()};
+        auto hit_in_world = r.getVector(res.first) * ratio + pos;
+        res.first = (std::abs(r.direction.x()) > std::abs(r.direction.y()) &&
+                     std::abs(r.direction.x()) > std::abs(r.direction.z())) ?
+                    (hit_in_world - ray.origin).x() / r.direction.x() : ((std::abs(r.direction.y()) >
+                                                                          std::abs(r.direction.z())) ?
+                                                                         (hit_in_world - ray.origin).y() /
+                                                                         r.direction.y() :
+                                                                         (hit_in_world - ray.origin).z() /
+                                                                         r.direction.z());
+        return {res.second, res.first, utils::Point2D()};
+    }
+
+    virtual std::pair<utils::Vector3, utils::Vector3> boundingBox() const override {
+        auto res = kd_tree.getAABB();
+        res.first = res.first * ratio + pos;
+        res.second = res.second * ratio + pos;
+        return res;
+    }
+
+    virtual utils::Vector3 norm(const utils::Vector3 &vec, const utils::Point2D &surface_coord) const override {
+        return utils::Vector3(); // dummy norm
     }
 };

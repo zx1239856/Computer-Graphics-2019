@@ -85,7 +85,9 @@ struct Sphere_GPU {
     __device__ triplet<utils::Vector3, double, utils::Point2D>
 
     intersect(const Ray &ray) const {
-        return intersectSphereObject(ray, origin, radius);
+        auto res = intersectSphereObject(ray, origin, radius);
+        res.first = norm(res.first);
+        return res;
     }
 
     __device__ pair<utils::Vector3, utils::Vector3>
@@ -127,7 +129,9 @@ struct Plane_GPU {
     __device__ triplet<utils::Vector3, double, utils::Point2D>
 
     intersect(const Ray &ray) const {
-        return intersectPlaneObject(ray, n, d, origin, xp, yp);
+        auto res = intersectPlaneObject(ray, n, d, origin, xp, yp);
+        res.first = n;
+        return res;
     }
 
     __device__ pair<utils::Vector3, utils::Vector3>
@@ -167,7 +171,7 @@ struct Cube_GPU {
 
     intersect(const Ray &ray) const {
         double t = intersectAABB(ray, p0, p1);
-        return {ray.getVector(t), t, utils::Point2D(0, 0)}; // surface coordinate not available for cube
+        return {norm(ray.getVector(t)), t, utils::Point2D(0, 0)}; // surface coordinate not available for cube
     }
 
     __device__ pair<utils::Vector3, utils::Vector3>
@@ -208,7 +212,8 @@ struct RotaryBezier_GPU {
 
     intersect(const Ray &ray) const {
         auto aabb = boundingBox();
-        return intersectBezierObject(ray, axis, bezier, aabb.first, aabb.second);
+        auto res = intersectBezierObject(ray, axis, bezier, aabb.first, aabb.second);
+        return {norm(res.first, res.third), res.second, res.third};
     }
 
     __device__ pair<utils::Vector3, utils::Vector3>

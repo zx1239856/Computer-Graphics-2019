@@ -4,7 +4,7 @@ project(hw2)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_BUILD_TYPE release)
 
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-sign-compare")
+set(CMAKE_CXX_FLAGS "-Wno-unused-but-set-variable -Wno-unused-parameter -Wno-sign-compare")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
@@ -38,11 +38,12 @@ if (BUILD_CUDA)
 endif ()
 
 if (BUILD_TEST)
-    message("Build bezier test")
+    message("Build test")
     add_executable(bezier_test utils/bezier_test.cpp)
     target_link_libraries(bezier_test ${OpenCV_LIBS})
+    add_executable(mesh_obj_test utils/mesh_obj_test.cpp obj/obj_wrapper.cpp)
 endif ()
 
-set(EXEC_FILES main.cpp utils/renderer.cpp utils/imghelper.h gpu/cuda_helpers.h)
+set(EXEC_FILES main.cpp utils/renderer.cpp obj/obj_wrapper.cpp)
 add_executable(main ${EXEC_FILES})
 target_link_libraries(main ${OpenCV_LIBS})

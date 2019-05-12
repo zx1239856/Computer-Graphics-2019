@@ -3,6 +3,7 @@
 #include "utils/imghelper.h"
 #include "utils/scene.hpp"
 #include "utils/camera.hpp"
+#include "obj/obj_wrapper.h"
 
 double clamp(double r) {
     return r < 0 ? 0 : r > 1 ? 1 : r;
@@ -22,7 +23,7 @@ int main(int argc, char **argv) {
     scene.addObject(new Sphere(Vector3(150, 1e5, 181.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); //bottom
     scene.addObject(
             new Sphere(Vector3(50, -1e5 + 381.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); //top
-    scene.addObject(new Sphere(Vector3(373, 16.5, 78), 16.5, Vector3(.9, .9, .5) * .999, Vector3(), BRDFs[GLASS]));
+    //scene.addObject(new Sphere(Vector3(373, 16.5, 78), 16.5, Vector3(.9, .9, .5) * .999, Vector3(), BRDFs[GLASS]));
     scene.addObject(new Sphere(Vector3(250, 981.6 - .63, 81.6), 600, Vector3(), Vector3(33, 33, 22), BRDFs[LIGHT])); // light
     //scene.addObject(new Cube(Vector3(267, 30, 167), Vector3(327, 30.5, 227), Vector3(.75, .75, .75), Vector3(), DIFF, 1.5));
 
@@ -35,7 +36,7 @@ int main(int argc, char **argv) {
     watercolor_texture.mapped_image = cvMat2Arr(_watercolor);
     watercolor_texture.mapped_transform = utils::Transform2D(1/M_PI, 0, 0, .5/M_PI, 0, 0.25);
     scene.addObject(new Plane(Vector3(0, 0, -1), 0, grunge_texture)); // back
-    scene.addObject(new Sphere(Vector3(327, 20, 97), 20, watercolor_texture));
+    //scene.addObject(new Sphere(Vector3(327, 20, 97), 20, watercolor_texture));
 
     // bezier part
     double xscale = 2, yscale = 2;
@@ -49,7 +50,9 @@ int main(int argc, char **argv) {
                                       {10. / xscale, 70. / yscale},
                                       {20. / xscale, 80. / yscale}};
     watercolor_texture.mapped_transform = utils::Transform2D(-1., 0, 0, .5/M_PI, 0, 0.25);
-    scene.addObject(new RotaryBezier(Vector3(297, 3, 197), ctrl_pnts, watercolor_texture));
+    //scene.addObject(new RotaryBezier(Vector3(297, 3, 197), ctrl_pnts, watercolor_texture));
+    auto param = loadObject("../model/dragon.obj");
+    scene.addObject(new TriangleMeshObject(utils::Vector3(330, 28, 50), 30., std::get<0>(param), std::get<1>(param), std::get<2>(param), Vector3(.75, .25, .25), Vector3(), BRDFs[DIFFUSE]));
     int w = atoi(argv[2]), h = atoi(argv[3]);
     Camera cam(w, h);
     cam.setPosition(Vector3(150, 30, 295.6), Vector3(0.35, -0.030612, -0.4).normalize());

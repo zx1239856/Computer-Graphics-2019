@@ -5,6 +5,32 @@
 #include "geometry.hpp"
 #include "ray.hpp"
 
+__host__ __device__ inline pair<double, utils::Vector3>
+intersectTrianglularFace(const Ray &r, const utils::Vector3 &v1, const utils::Vector3 &v2, const utils::Vector3 &v3,
+                         const utils::Vector3 &n1, const utils::Vector3 &n2, const utils::Vector3 &n3) {
+    auto e1 = v2 - v1, e2 = v3 - v1;
+    auto h = r.direction.cross(e2), s = r.origin - v1;
+    double a = e1.dot(h);
+    if (fabs(a) < EPSILON_2)
+        return {INF, utils::Vector3()};
+    double f = 1. / a;
+    double u = f * h.dot(s);
+    if (u < 0. || u > 1.)
+        return {INF, utils::Vector3()};
+    auto q = s.cross(e1);
+    auto v = f * r.direction.dot(q);
+    if (v < 0 || u + v > 1.)
+        return {INF, utils::Vector3()};
+    double t = f * e2.dot(q);
+    if (t > EPSILON_2) {
+        auto x = r.getVector(t);
+        double s1 = (x - v2).cross(x - v3).len(), s2 = (x - v1).cross(x - v3).len(), s3 = (x - v1).cross(x - v2).len();
+        auto norm = (n1 * s1 + n2 * s2 + n3 * s3).normalize();
+        return {t, norm};
+    } else
+        return {INF, utils::Vector3()};
+}
+
 __host__ __device__ inline double intersectSphere(const Ray &ray, const utils::Vector3 &o, double r) {
     utils::Vector3 op = o - ray.origin;
     double b = op.dot(ray.direction);
@@ -174,7 +200,7 @@ intersectBezierObject(const Ray &ray, const utils::Vector3 &axis, const BezierTy
         auto hit = bezier.getPoint(t_);
         double err = abs(initial_y - hit.y - axis.y());
         if (err > EPSILON_2) {
-        // drop value because error too large
+            // drop value because error too large
             return {utils::Vector3(), INF, utils::Point2D(0, 0)};
         }
         double t = intersectSphere(ray, utils::Vector3(axis.x(), axis.y() + hit.y, axis.z()), hit.x);
@@ -195,11 +221,11 @@ intersectBezierObject(const Ray &ray, const utils::Vector3 &axis, const BezierTy
             //t = horiz_intersect(ray, t_);
             err = abs(ray.origin.y() - hit.y - axis.y());
             if (err > EPSILON_2) {
-            //printf("Dropping result because err too large: %lf\n", err);
+                //printf("Dropping result because err too large: %lf\n", err);
                 return {utils::Vector3(), INF, utils::Point2D(0, 0)};
             } else {
                 auto pnt = ray.getVector(t);
-            //printf("(%lf, %lf, %lf)\n", pnt.x(), pnt.y(), pnt.z());
+                //printf("(%lf, %lf, %lf)\n", pnt.x(), pnt.y(), pnt.z());
                 double phi = std::atan2(pnt.z() - axis.z(), pnt.x() - axis.x());
                 return {pnt, t, utils::Point2D(t_, phi < 0 ? phi + PI_DOUBLED : phi)};
             }

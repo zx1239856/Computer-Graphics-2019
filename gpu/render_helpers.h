@@ -25,22 +25,22 @@ findFirstIntersect(const KernelArray<Plane_GPU> &planes, const KernelArray<Cube_
     for (size_t i = 0; i < planes._size; ++i) {
         auto res = planes._array[i].intersect(r);
         if (res.second < t && res.first.len2() > EPSILON)
-            t = res.second, param = res.third, texture = &planes._array[i].texture, norm = planes._array[i].norm(res.first, res.third);
+            t = res.second, param = res.third, texture = &planes._array[i].texture, norm = res.first;
     }
     for (size_t i = 0; i < cubes._size; ++i) {
         auto res = cubes._array[i].intersect(r);
         if (res.second < t && res.first.len2() > EPSILON)
-            t = res.second, param = res.third, texture = &cubes._array[i].texture, norm = cubes._array[i].norm(res.first, res.third);
+            t = res.second, param = res.third, texture = &cubes._array[i].texture, norm = res.first;
     }
     for (size_t i = 0; i < spheres._size; ++i) {
         auto res = spheres._array[i].intersect(r);
         if (res.second < t && res.first.len2() > EPSILON)
-            t = res.second, param = res.third, texture = &spheres._array[i].texture, norm = spheres._array[i].norm(res.first, res.third);
+            t = res.second, param = res.third, texture = &spheres._array[i].texture, norm = res.first;
     }
     for (size_t i = 0; i < beziers._size; ++i) {
         auto res = beziers._array[i].intersect(r);
         if (res.second < t && res.first.len2() > EPSILON)
-            t = res.second, param = res.third, texture = &beziers._array[i].texture, norm = beziers._array[i].norm(res.first, res.third);
+            t = res.second, param = res.third, texture = &beziers._array[i].texture, norm = res.first;
     }
     return {norm, t, {param, texture}};
 }

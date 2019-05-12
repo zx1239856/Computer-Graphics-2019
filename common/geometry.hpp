@@ -2,8 +2,10 @@
 #define _VECTOR_3_HPP
 
 #ifndef __NVCC__
+
 #include <cmath>
 #include <algorithm>
+
 #define __device__
 #define __host__
 #endif
@@ -37,13 +39,25 @@ namespace utils {
 
         __device__ __host__ FloatType z() const { return _z; }
 
-        __device__ __host__ Vector3 mult(const Vector3 &other) const { return Vector3(_x * other._x, _y * other._y, _z * other._z); }
+        __device__ __host__ FloatType &x() { return _x; }
 
-        __device__ __host__ Vector3 operator+(const Vector3 &other) const { return Vector3(_x + other._x, _y + other._y, _z + other._z); }
+        __device__ __host__ FloatType &y() { return _y; }
+
+        __device__ __host__ FloatType &z() { return _z; }
+
+        __device__ __host__ Vector3 mult(const Vector3 &other) const {
+            return Vector3(_x * other._x, _y * other._y, _z * other._z);
+        }
+
+        __device__ __host__ Vector3 operator+(const Vector3 &other) const {
+            return Vector3(_x + other._x, _y + other._y, _z + other._z);
+        }
 
         __device__ __host__ Vector3 operator+(FloatType v) const { return Vector3(_x + v, _y + v, _z + v); }
 
-        __device__ __host__ Vector3 operator-(const Vector3 &other) const { return Vector3(_x - other._x, _y - other._y, _z - other._z); }
+        __device__ __host__ Vector3 operator-(const Vector3 &other) const {
+            return Vector3(_x - other._x, _y - other._y, _z - other._z);
+        }
 
         __device__ __host__ Vector3 operator-() const { return Vector3(-_x, -_y, -_z); }
 
@@ -51,7 +65,9 @@ namespace utils {
 
         __device__ __host__ Vector3 operator*(FloatType v) const { return Vector3(_x * v, _y * v, _z * v); }
 
-        __device__ __host__ Vector3 operator*(const Vector3 &other) { return Vector3(_x * other._x, _y * other._y, _z * other._z); }
+        __device__ __host__ Vector3 operator*(const Vector3 &other) {
+            return Vector3(_x * other._x, _y * other._y, _z * other._z);
+        }
 
         __device__ __host__ Vector3 operator/(FloatType v) const { return Vector3(_x / v, _y / v, _z / v); }
 
@@ -67,7 +83,9 @@ namespace utils {
 
         __device__ __host__ Vector3 &operator/=(FloatType v) { return *this = *this / v; }
 
-        __device__ __host__ FloatType dot(const Vector3 &other) const { return _x * other._x + _y * other._y + _z * other._z; }
+        __device__ __host__ FloatType dot(const Vector3 &other) const {
+            return _x * other._x + _y * other._y + _z * other._z;
+        }
 
         __device__ __host__ Vector3 cross(const Vector3 &other) const {
             return Vector3(_y * other._z - _z * other._y, _z * other._x - _x * other._z, _x * other._y - _y * other._x);
@@ -82,6 +100,14 @@ namespace utils {
         __device__ __host__ double max() const { return (_x > _y && _x > _z) ? _x : _y > _z ? _y : _z; }
 
         __device__ __host__ double min() const { return (_x < _y && _x < _z) ? _x : _y < _z ? _y : _z; }
+
+        __device__ __host__ bool operator==(const Vector3 &other) const {
+            return _x == other._x && _y == other._y && _z == other._z;
+        }
+
+        __device__ __host__ bool operator!=(const Vector3 &other) const {
+            return _x != other._x || _y != other._y || _z != other._z;
+        }
 
         __device__ __host__ Vector3 reflect(const Vector3 &n) const { return (*this) - n * n.dot(*this) * 2.; }
 
@@ -100,12 +126,12 @@ namespace utils {
         }
     };
 
-    template <>
+    template<>
     __device__ __host__ inline Vector3 min<Vector3>(const Vector3 &a, const Vector3 &b) {
         return Vector3(min(a.x(), b.x()), min(a.y(), b.y()), min(a.z(), b.z()));
     }
 
-    template <>
+    template<>
     __device__ __host__ inline Vector3 max<Vector3>(const Vector3 &a, const Vector3 &b) {
         return Vector3(max(a.x(), b.x()), max(a.y(), b.y()), max(a.z(), b.z()));
     }
@@ -137,7 +163,8 @@ namespace utils {
         double x11, x12, x21, x22;
         double tx, ty;
 
-        __device__ __host__ explicit Transform2D(double _x11 = 1, double _x12 = 0, double _x21 = 0, double _x22 = 1, double _tx = 0, double _ty = 0)
+        __device__ __host__ explicit Transform2D(double _x11 = 1, double _x12 = 0, double _x21 = 0, double _x22 = 1,
+                                                 double _tx = 0, double _ty = 0)
                 : x11(_x11), x12(_x12),
                   x21(_x21), x22(_x22), tx(_tx), ty(_ty) {}
 

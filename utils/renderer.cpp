@@ -11,7 +11,7 @@ utils::Vector3 basic_pt(const Scene &scene, const Ray &ray, int depth, unsigned 
     if(obj == nullptr)
         return utils::Vector3();
     bool into = false;
-    utils::Vector3 x = ray.getVector(std::get<1>(intersect)), n = obj->norm(x, std::get<2>(intersect)), nl =
+    utils::Vector3 x = ray.getVector(std::get<1>(intersect)), n = std::get<3>(intersect), nl =
             n.dot(ray.direction) < 0 ? into = true, n : -n;
     const Texture& texture = obj->texture;
     auto && f = texture.getColor(std::get<2>(intersect), X);
