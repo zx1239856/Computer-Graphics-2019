@@ -7,6 +7,7 @@
 #include "math_helpers.h"
 #include "../common/simple_intersect_algs.hpp"
 #include "../utils/bezier.hpp"
+#include "../utils/kdtree.hpp"
 
 
 struct Texture_GPU {
@@ -17,6 +18,7 @@ struct Texture_GPU {
     cudaTextureObject_t mapped_image;
     int img_w = 0, img_h = 0;
     utils::Transform2D mapped_transform;
+
     ~Texture_GPU() {
         CUDA_SAFE_CALL(cudaDestroyTextureObject(mapped_image));
     }
@@ -52,7 +54,8 @@ struct Texture_GPU {
             int u = (lround(w * p.y + .5) % w + w) % w, v =
                     (lround(h * p.x + .5) % h + h) % h;
             uchar4 cc = tex1Dfetch<uchar4>(mapped_image, v * w + u);
-            auto color = utils::Vector3(cc.x / 255. * 0.999, cc.y / 255. * 0.999, cc.z / 255. * 0.999); // 8 bit per channel, so color is in [0, 255]
+            auto color = utils::Vector3(cc.x / 255. * 0.999, cc.y / 255. * 0.999,
+                                        cc.z / 255. * 0.999); // 8 bit per channel, so color is in [0, 255]
             if (prob < specular)
                 return {color, SPEC};
             else if (prob < diffuse) {
@@ -76,7 +79,8 @@ struct Sphere_GPU {
 
     __host__ __device__
 
-    Sphere_GPU(const utils::Vector3 &o, double r, const utils::Vector3 &_color, const utils::Vector3 &_emission, const BRDF &brdf) : origin(o), radius(r) {
+    Sphere_GPU(const utils::Vector3 &o, double r, const utils::Vector3 &_color, const utils::Vector3 &_emission,
+               const BRDF &brdf) : origin(o), radius(r) {
         texture.color = _color, texture.emission = _emission, texture.specular = brdf.specular,
         texture.diffuse = brdf.diffuse, texture.refraction = brdf.refraction, texture.rho_d = brdf.rho_d,
         texture.rho_s = brdf.rho_s, texture.phong_s = brdf.phong_s, texture.re_idx = brdf.re_idx;
@@ -229,5 +233,64 @@ struct RotaryBezier_GPU {
 
     norm(const utils::Vector3 &vec, const utils::Point2D &surface_coord) const {
         return normOfBezier(vec, surface_coord, bezier);
+    }
+};
+
+struct TriangleMeshObject_GPU {
+    utils::Vector3 pos;
+    double ratio;
+    utils::KDTree_GPU kd_tree;
+    Texture_GPU texture;
+
+    __host__ __device__
+
+    TriangleMeshObject_GPU(const utils::Vector3 &_pos, double _ratio, const utils::KDTree_GPU &gpu_tree,
+                           const Texture_GPU &t) :
+            pos(_pos), ratio(_ratio), kd_tree(gpu_tree), texture(t) {}
+
+
+    __host__ __device__
+
+    TriangleMeshObject_GPU(const utils::Vector3 &_pos, double _ratio, const utils::KDTree_GPU &gpu_tree, const utils::Vector3 &color,
+                     const utils::Vector3 &emission,
+                     const BRDF &brdf) : pos(_pos), ratio(_ratio), kd_tree(gpu_tree) {
+        texture.color = color, texture.emission = emission, texture.specular = brdf.specular,
+        texture.diffuse = brdf.diffuse, texture.refraction = brdf.refraction, texture.rho_d = brdf.rho_d,
+        texture.rho_s = brdf.rho_s, texture.phong_s = brdf.phong_s, texture.re_idx = brdf.re_idx;
+    }
+
+    __device__ triplet<utils::Vector3, double, utils::Point2D>
+
+    intersect(const Ray &ray) const {
+        auto r = ray;
+        r.origin = (r.origin - pos) / ratio;
+        auto res = kd_tree.singleRayStacklessIntersect(r);
+        if (res.first >= INF)
+            return {utils::Vector3(), INF, utils::Point2D()};
+        auto hit_in_world = r.getVector(res.first) * ratio + pos;
+        res.first = (abs(r.direction.x()) > abs(r.direction.y()) &&
+                     abs(r.direction.x()) > abs(r.direction.z())) ?
+                    (hit_in_world - ray.origin).x() / r.direction.x() : ((abs(r.direction.y()) >
+                                                                          abs(r.direction.z())) ?
+                                                                         (hit_in_world - ray.origin).y() /
+                                                                         r.direction.y() :
+                                                                         (hit_in_world - ray.origin).z() /
+                                                                         r.direction.z());
+        return {res.second, res.first, utils::Point2D()};
+    }
+
+    __device__ pair<utils::Vector3, utils::Vector3>
+
+    boundingBox() const {
+        auto res = kd_tree.getAABB();
+        res.first = res.first * ratio + pos - 0.5;
+        res.second = res.second * ratio + pos + 0.5;
+        return res;
+    }
+
+    __device__ utils::Vector3
+
+    norm(const utils::Vector3 &vec, const utils::Point2D &surface_coord) const {
+        return utils::Vector3();  // dummy norm
     }
 };

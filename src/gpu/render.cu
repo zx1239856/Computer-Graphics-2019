@@ -4,11 +4,13 @@
 #include "object.hpp"
 #include "render_helpers.h"
 #include "../utils/bezier.hpp"
+#include "../utils/kdtree.hpp"
+#include "../obj/obj_wrapper.h"
 #include <cuda_profiler_api.h>
 
 __global__ void
 debug_kernel(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU> cubes, KernelArray<Plane_GPU> planes,
-             KernelArray<RotaryBezier_GPU> beziers) {
+             KernelArray<RotaryBezier_GPU> beziers, KernelArray<TriangleMeshObject_GPU> meshes) {
     Ray r(utils::Vector3(0, 50, 100), utils::Vector3(1, -0.1, -1).normalize());
     printf("Total count: #sphere: %d, #cube: %d, #plane: %d, #bezier: %d\n", spheres._size, cubes._size, planes._size,
            beziers._size);
@@ -20,16 +22,18 @@ debug_kernel(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU> cubes, Kerne
         planes._array[i].intersect(r);
     for (auto i = 0; i < spheres._size; ++i)
         beziers._array[i].intersect(r);
+    for (auto i = 0; i < meshes._size; ++i)
+        meshes._array[i].intersect(r);
 }
 
 __device__ static utils::Vector3
 radiance(KernelArray<Sphere_GPU> &spheres, KernelArray<Cube_GPU> &cubes, KernelArray<Plane_GPU> &planes,
-         KernelArray<RotaryBezier_GPU> &beziers, const Ray &ray, curandState *state) {
+         KernelArray<RotaryBezier_GPU> &beziers, KernelArray<TriangleMeshObject_GPU> &meshes, const Ray &ray, curandState *state) {
     Ray r = ray;
     utils::Vector3 L, F(1., 1., 1.);
     size_t depth = 0;
     while (true) {
-        auto &&res = findFirstIntersect(planes, cubes, spheres, beziers,
+        auto &&res = findFirstIntersect(planes, cubes, spheres, beziers, meshes,
                                         r);  // triplet<utils::Vector3, double, pair<utils::Point2D, Texture_GPU*>>
         auto &&texture = res.third.second;
         if (res.second >= INF || res.second < 0)
@@ -95,7 +99,7 @@ radiance(KernelArray<Sphere_GPU> &spheres, KernelArray<Cube_GPU> &cubes, KernelA
 }
 
 __global__ void render_pt(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU> cubes, KernelArray<Plane_GPU> planes,
-                          KernelArray<RotaryBezier_GPU> beziers, Camera cam, int samps,
+                          KernelArray<RotaryBezier_GPU> beziers, KernelArray<TriangleMeshObject_GPU> meshes, Camera cam, int samps,
                           KernelArray<utils::Vector3> out_buffer) {
     const uint32_t u = threadIdx.x + blockIdx.x * blockDim.x;
     const uint32_t v = threadIdx.y + blockIdx.y * blockDim.y;
@@ -126,7 +130,7 @@ __global__ void render_pt(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU>
                                           (utils::Vector3(curand_uniform_double(&state) * 1.01,
                                                           curand_uniform_double(&state)) - .5) * 2 *
                                           cam.aperture; // origin perturbation
-                r += radiance(spheres, cubes, planes, beziers, Ray(p_origin, (hit - p_origin).normalize()), &state) *
+                r += radiance(spheres, cubes, planes, beziers, meshes, Ray(p_origin, (hit - p_origin).normalize()), &state) *
                      (1. / samps);
             }
             out_buffer._array[(cam.h - v - 1) * cam.w + u] += r.clamp(0, 1) * .25;
@@ -140,22 +144,23 @@ int main(int argc, char **argv) {
         return 0;
     printDeviceProperty();
     std::vector<Sphere_GPU> spheres_;
+    std::vector<Cube_GPU> cubes_;
+    std::vector<Plane_GPU> planes_;
+    std::vector<RotaryBezier_GPU> beziers_;
+    std::vector<TriangleMeshObject_GPU> meshes_;
     spheres_.emplace_back(Sphere_GPU(Vector3(150, 1e5, 181.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL]));
     spheres_.emplace_back(Sphere_GPU(Vector3(50, -1e5 + 381.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); // top
     spheres_.emplace_back(Sphere_GPU(Vector3(375, 16.5 + 8, 25), 16.5, Vector3(.9, .9, .75) * .999, Vector3(), BRDFs[GLASS]));
     spheres_.emplace_back(Sphere_GPU(Vector3(250, 1181.6 - .9, 81.6), 800, Vector3(), Vector3(50, 50, 50), BRDFs[LIGHT])); // top light
-    std::vector<Cube_GPU> cubes_;
     Texture_GPU lightcube;
     lightcube.re_idx = 1.3, lightcube.color = Vector3(0.85, 0.85, 0.7), lightcube.emission = Vector3(),
             lightcube.setBRDF(BRDFs[DIFFUSE]);
     cubes_.emplace_back(
             Cube_GPU(Vector3(350, 0, 0), Vector3(400, 8, 50), lightcube));
-    std::vector<Plane_GPU> planes_;
     planes_.emplace_back(Plane_GPU(Vector3(-1, 0, 0), 1, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL]));  // left
     //planes_.emplace_back(Plane_GPU(Vector3(1, 0, 0), 400, Vector3(.25, .25, .75), Vector3(), DIFF, 1.5)); // right
     planes_.emplace_back(Plane_GPU(Vector3(0, 0, 1), 500, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL]));  // front
     planes_.emplace_back(Plane_GPU(Vector3(0, 0, -1), 0, Vector3(.25, .5, .75), Vector3(), BRDFs[WALL])); // back
-    std::vector<RotaryBezier_GPU> beziers_;
 
     cv::Mat _oilpainting = cv::imread("../texture/oil_painting.png");
     cv::Mat _watercolor = cv::imread("../texture/watercolor.jpg");
@@ -196,14 +201,20 @@ int main(int argc, char **argv) {
     watercolor_texture.setBRDF(BRDFs[CERAMIC]);
     watercolor_texture.mapped_transform = Transform2D(-1., 0, 0, .5 / M_PI, 0, 0.25);
     beziers_.emplace_back(RotaryBezier_GPU(Vector3(297, 3, 197), cpu_bezier.toGPU(), watercolor_texture));
+
+    auto param = loadObject("../model/angel_lucy.obj");
+    KDTree cpu_tree(std::get<0>(param), std::get<1>(param), std::get<2>(param));
+    KDTree_GPU gpu_tree = cpu_tree.toGPU();
+    meshes_.emplace_back(TriangleMeshObject_GPU(utils::Vector3(300, .5-1.19, 130), 0.1, gpu_tree, Vector3(.75, .75, .75), Vector3(), BRDFs[CERAMIC]));
+
     //debug_kernel<<<1,1>>>(convertToKernel(spheres), convertToKernel(cubes), convertToKernel(planes), convertToKernel(beziers));
     //cudaDeviceSynchronize();
 
     // camera params
     Camera cam = {
             atoi(argv[2]), atoi(argv[3]),
-            Vector3(150, 33, 295.6), Vector3(0.4, -0.030612, -0.35).normalize(),
-            0.5135, 0.2, 313
+            Vector3(150, 40, 295.6), Vector3(0.4, -0.008612, -0.35).normalize(),
+            0.6135, 0.2, 313
     };
 
     // render
@@ -213,7 +224,7 @@ int main(int argc, char **argv) {
     printf("Memory copied to GPU, now start executing render kernel...\n");
     render_pt << < nblocks, nthreads >> >
                             (makeKernelArr(spheres_), makeKernelArr(cubes_), makeKernelArr(planes_), makeKernelArr(
-                                    beziers_), cam, atoi(argv[1]) / 4, gpu_out);
+                                    beziers_), makeKernelArr(meshes_), cam, atoi(argv[1]) / 4, gpu_out);
     std::vector<Vector3> res = makeStdVector(gpu_out);
     releaseKernelArr(gpu_out);
     FILE *f = fopen("image.ppm", "w");

@@ -5,8 +5,8 @@
 #include <cassert>
 #include <cmath>
 #include "bezier.hpp"
+#include "kdtree.hpp"
 #include "../common/simple_intersect_algs.hpp"
-#include "../common/kdtree.hpp"
 
 
 /*
@@ -210,7 +210,7 @@ public:
 };
 
 class TriangleMeshObject : public BasicObject {
-    KDTree kd_tree;
+    utils::KDTree kd_tree;
     utils::Vector3 pos;
     double ratio;
 public:
@@ -245,8 +245,8 @@ public:
 
     virtual std::pair<utils::Vector3, utils::Vector3> boundingBox() const override {
         auto res = kd_tree.getAABB();
-        res.first = res.first * ratio + pos;
-        res.second = res.second * ratio + pos;
+        res.first = res.first * ratio + pos - 0.5;
+        res.second = res.second * ratio + pos + 0.5;
         return res;
     }
 
