@@ -59,6 +59,21 @@ intersectSphereObject(const Ray &ray, const utils::Vector3 &o, double r) {
         return {utils::Vector3(), INF, utils::Point2D(0, 0)};
 }
 
+__host__ __device__ inline triplet<bool, double, double>
+intersectAABBInOut(const Ray &r, const utils::Vector3 &p0, const utils::Vector3 &p1) {
+    double t1 = (p0.x() - r.origin.x()) / r.direction.x();
+    double t2 = (p1.x() - r.origin.x()) / r.direction.x();
+    double t3 = (p0.y() - r.origin.y()) / r.direction.y();
+    double t4 = (p1.y() - r.origin.y()) / r.direction.y();
+    double t5 = (p0.z() - r.origin.z()) / r.direction.z();
+    double t6 = (p1.z() - r.origin.z()) / r.direction.z();
+
+    double tmin = fmax(fmax(fmin(t1, t2), fmin(t3, t4)), fmin(t5, t6));
+    double tmax = fmin(fmin(fmax(t1, t2), fmax(t3, t4)), fmax(t5, t6));
+
+    return {tmax > 0 && tmin <= tmax, tmin, tmax};
+}
+
 __host__ __device__ inline double intersectAABB(const Ray &ray, const utils::Vector3 &p0, const utils::Vector3 &p1) {
     double t, t_min = INF;
 

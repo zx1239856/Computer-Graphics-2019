@@ -228,7 +228,7 @@ public:
     virtual std::tuple<utils::Vector3, double, utils::Point2D> intersect(const Ray &ray) const override {
         auto r = ray;
         r.origin = (r.origin - pos) / ratio;
-        auto res = kd_tree.intersect(r);
+        auto res = kd_tree.singleRayStacklessIntersect(r);
         if(res.first >= INF)
             return {utils::Vector3(), INF, utils::Point2D()};
         auto hit_in_world = r.getVector(res.first) * ratio + pos;
