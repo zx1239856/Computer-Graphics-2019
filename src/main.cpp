@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
     scene.addObject(new Plane(Vector3(1, 0, 0), 399, Vector3(.25, .25, .75), Vector3(), BRDFs[WALL])); // right
     scene.addObject(new Cube(Vector3(340, 0, 0), Vector3(400, 5, 60), Vector3(.15, .35, .55), Vector3(), BRDFs[DIFFUSE]));
     scene.addObject(new Plane(Vector3(0, 0, 1), 500, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); //front
-    scene.addObject(new Sphere(Vector3(150, 1e5, 181.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); //bottom
+    scene.addObject(new Sphere(Vector3(150, 1e5, 181.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[FLOOR])); //bottom
     scene.addObject(
             new Sphere(Vector3(50, -1e5 + 381.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); //top
     //scene.addObject(new Sphere(Vector3(373, 16.5, 78), 16.5, Vector3(.9, .9, .5) * .999, Vector3(), BRDFs[GLASS]));
@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
     //scene.addObject(new RotaryBezier(Vector3(297, 3, 197), ctrl_pnts, watercolor_texture));
     auto param = loadObject("../model/angel_lucy.obj");
     //scene.addObject(new TriangleMeshObject(utils::Vector3(330, 28, 50), 30., std::get<0>(param), std::get<1>(param), std::get<2>(param), Vector3(.75, .25, .25), Vector3(), BRDFs[DIFFUSE]));
-	scene.addObject(new TriangleMeshObject(utils::Vector3(300, 1-1.19, 130), 0.1, std::get<0>(param), std::get<1>(param), std::get<2>(param), Vector3(.75, .75, .75), Vector3(), BRDFs[DIFFUSE]));
+	scene.addObject(new TriangleMeshObject(utils::Vector3(300, 1-1.19, 130), 0.1, std::get<0>(param), std::get<1>(param), std::get<2>(param), Vector3(.75, .75, .75), Vector3(), BRDFs[METAL]));
     int w = atoi(argv[2]), h = atoi(argv[3]);
     Camera cam(w, h);
     cam.setPosition(Vector3(150, 50, 295.6), Vector3(0.35, -0.030612, -0.4).normalize());

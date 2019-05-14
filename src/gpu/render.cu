@@ -28,7 +28,8 @@ debug_kernel(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU> cubes, Kerne
 
 __device__ static utils::Vector3
 radiance(KernelArray<Sphere_GPU> &spheres, KernelArray<Cube_GPU> &cubes, KernelArray<Plane_GPU> &planes,
-         KernelArray<RotaryBezier_GPU> &beziers, KernelArray<TriangleMeshObject_GPU> &meshes, const Ray &ray, curandState *state) {
+         KernelArray<RotaryBezier_GPU> &beziers, KernelArray<TriangleMeshObject_GPU> &meshes, const Ray &ray,
+         curandState *state) {
     Ray r = ray;
     utils::Vector3 L, F(1., 1., 1.);
     size_t depth = 0;
@@ -80,26 +81,34 @@ radiance(KernelArray<Sphere_GPU> &spheres, KernelArray<Cube_GPU> &cubes, KernelA
                 break;
             }
             default: {
-                double a = curand_uniform_double(state);   // phong model
-                double s = 1;
-                if (a < texture->rho_s)
-                    s = texture->phong_s;
-                if (a >= texture->rho_d)
-                    return L;
-                double r1 = 2 * M_PI * curand_uniform_double(state), r2s = pow(curand_uniform_double(state),
-                                                                               1. / (s + 1));
-                utils::Vector3 u = ((fabs(nl.x()) > .1 ? utils::Vector3(0, 1) : utils::Vector3(1)).cross(
-                        nl)).normalize(), v = nl.cross(u);
-                utils::Vector3 d = (u * cos(r1) * r2s + v * sin(r1) * r2s + nl * sqrt(1 - r2s * r2s)).normalize();
-                r = Ray(x, d);
-                break;
+                double a = curand_uniform_double(state);
+                if (a < texture->rho_s) {
+                    // phong specular
+                    double phi = 2 * M_PI * curand_uniform_double(state), r2 = curand_uniform_double(state);
+                    double cos_theta = pow(1 - r2, 1 / (1 + texture->phong_s));
+                    double sin_theta = sqrt(1 - cos_theta * cos_theta);
+                    utils::Vector3 w = ray.direction.reflect(nl), u = ((fabs(w.x()) > .1 ? utils::Vector3(0, 1)
+                                                                                         : utils::Vector3(1)).cross(
+                            nl)).normalize(), v = w.cross(u).normalize();
+                    utils::Vector3 d = (u * cos(phi) * sin_theta + v * sin(phi) * sin_theta +
+                                        w * cos_theta).normalize();
+                    r = Ray(x, d);
+                } else if (a < texture->rho_d) {
+                    double r1 = 2 * M_PI * curand_uniform_double(state), r2s = sqrt(curand_uniform_double(state));
+                    utils::Vector3 w = nl, u = ((fabs(w.x()) > .1 ? utils::Vector3(0, 1) : utils::Vector3(1)).cross(
+                            nl)).normalize(), v = w.cross(u).normalize();
+                    utils::Vector3 d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2s * r2s)).normalize();
+                    r = Ray(x, d);
+                } else return L;
             }
+                break;
         }
     }
 }
 
 __global__ void render_pt(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU> cubes, KernelArray<Plane_GPU> planes,
-                          KernelArray<RotaryBezier_GPU> beziers, KernelArray<TriangleMeshObject_GPU> meshes, Camera cam, int samps,
+                          KernelArray<RotaryBezier_GPU> beziers, KernelArray<TriangleMeshObject_GPU> meshes, Camera cam,
+                          int samps,
                           KernelArray<utils::Vector3> out_buffer) {
     const uint32_t u = threadIdx.x + blockIdx.x * blockDim.x;
     const uint32_t v = threadIdx.y + blockIdx.y * blockDim.y;
@@ -130,7 +139,8 @@ __global__ void render_pt(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU>
                                           (utils::Vector3(curand_uniform_double(&state) * 1.01,
                                                           curand_uniform_double(&state)) - .5) * 2 *
                                           cam.aperture; // origin perturbation
-                r += radiance(spheres, cubes, planes, beziers, meshes, Ray(p_origin, (hit - p_origin).normalize()), &state) *
+                r += radiance(spheres, cubes, planes, beziers, meshes, Ray(p_origin, (hit - p_origin).normalize()),
+                              &state) *
                      (1. / samps);
             }
             out_buffer._array[(cam.h - v - 1) * cam.w + u] += r.clamp(0, 1) * .25;
@@ -148,10 +158,14 @@ int main(int argc, char **argv) {
     std::vector<Plane_GPU> planes_;
     std::vector<RotaryBezier_GPU> beziers_;
     std::vector<TriangleMeshObject_GPU> meshes_;
-    spheres_.emplace_back(Sphere_GPU(Vector3(150, 1e5, 181.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL]));
-    spheres_.emplace_back(Sphere_GPU(Vector3(50, -1e5 + 381.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); // top
-    spheres_.emplace_back(Sphere_GPU(Vector3(375, 16.5 + 8, 25), 16.5, Vector3(.9, .9, .75) * .999, Vector3(), BRDFs[GLASS]));
-    spheres_.emplace_back(Sphere_GPU(Vector3(250, 1181.6 - .9, 81.6), 800, Vector3(), Vector3(50, 50, 50), BRDFs[LIGHT])); // top light
+    spheres_.emplace_back(
+            Sphere_GPU(Vector3(150, 1e5, 181.6), 1e5, Vector3(.9, .9, .9), Vector3(), BRDFs[FLOOR])); //bottom
+    spheres_.emplace_back(
+            Sphere_GPU(Vector3(50, -1e5 + 381.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); // top
+    spheres_.emplace_back(
+            Sphere_GPU(Vector3(375, 16.5 + 8, 25), 16.5, Vector3(.9, .9, .75) * .999, Vector3(), BRDFs[GLASS]));
+    spheres_.emplace_back(Sphere_GPU(Vector3(250, 1181.6 - .9, 81.6), 800, Vector3(), Vector3(50, 50, 50),
+                                     BRDFs[LIGHT])); // top light
     Texture_GPU lightcube;
     lightcube.re_idx = 1.3, lightcube.color = Vector3(0.85, 0.85, 0.7), lightcube.emission = Vector3(),
             lightcube.setBRDF(BRDFs[DIFFUSE]);
@@ -183,7 +197,7 @@ int main(int argc, char **argv) {
     watercolor_texture.mapped_image = watercolor;
     watercolor_texture.mapped_transform = Transform2D(1 / M_PI, 0, 0, .5 / M_PI, 0, 0.25);
     //spheres_.emplace_back(Sphere_GPU(Vector3(280, 13, 103), 13, watercolor_texture));
-    spheres_.emplace_back(Sphere_GPU(Vector3(280, 13, 103), 13, Vector3(.75, .75, .75), Vector3(), BRDFs[PHONG]));
+    spheres_.emplace_back(Sphere_GPU(Vector3(260, 13, 133), 13, Vector3(.75, .75, .75), Vector3(), BRDFs[METAL]));
 
 
     double xscale = 2, yscale = 2;
@@ -200,12 +214,14 @@ int main(int argc, char **argv) {
 
     watercolor_texture.setBRDF(BRDFs[CERAMIC]);
     watercolor_texture.mapped_transform = Transform2D(-1., 0, 0, .5 / M_PI, 0, 0.25);
-    beziers_.emplace_back(RotaryBezier_GPU(Vector3(297, 3, 197), cpu_bezier.toGPU(), watercolor_texture));
+    beziers_.emplace_back(RotaryBezier_GPU(Vector3(310, 3, 205), cpu_bezier.toGPU(), watercolor_texture));
 
     auto param = loadObject("../model/angel_lucy.obj");
     KDTree cpu_tree(std::get<0>(param), std::get<1>(param), std::get<2>(param));
     KDTree_GPU gpu_tree = cpu_tree.toGPU();
-    meshes_.emplace_back(TriangleMeshObject_GPU(utils::Vector3(300, .5-1.19, 130), 0.1, gpu_tree, Vector3(.75, .75, .75), Vector3(), BRDFs[CERAMIC]));
+    meshes_.emplace_back(
+            TriangleMeshObject_GPU(utils::Vector3(290, .5 - 1.19, 109), 0.1, gpu_tree, Vector3(.75, .75, .75), Vector3(),
+                                   BRDFs[DIFFUSE]));
 
     //debug_kernel<<<1,1>>>(convertToKernel(spheres), convertToKernel(cubes), convertToKernel(planes), convertToKernel(beziers));
     //cudaDeviceSynchronize();

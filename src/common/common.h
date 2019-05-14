@@ -24,7 +24,7 @@ enum Refl_t {
 }; // material type, DIFFuse, SPECular, REFRactive
 
 enum {
-    DIFFUSE = 0, MIRROR, GLASS, LIGHT, CERAMIC, FLOOR, WALL, PHONG
+    DIFFUSE = 0, MIRROR, GLASS, LIGHT, CERAMIC, FLOOR, WALL, METAL
 };
 
 struct BRDF {
@@ -38,10 +38,10 @@ const BRDF BRDFs[] = {
         {1, 0, 0, 0, 0, 0, 0}, // MIRROR
         {0, 0, 1, 0, 0, 0, 1.65}, // GLASS
         {0, 1, 0, 0, 0, 0, 0}, // LIGHT
-        {0.1, 0.9, 0, 1, 0, 30, 0}, // CERAMIC
-        {0.1, 0.9, 0, 0.9, 0.1, 50, 0}, // FLOOR
+        {0.1, 0.9, 0, 1, 0, 0, 0}, // CERAMIC
+        {0, 1, 0, 0.8, 0.2, 10, 0}, // FLOOR
         {0, 1, 0, 1, 0, 0, 0}, // WALL
-        {0, 1, 0, 0.8, 0.2, 0.3, 0} // PHONG
+        {0, 1, 0, 0, 1, 20, 0} // METAL
 };
 
 template<typename T, typename K>

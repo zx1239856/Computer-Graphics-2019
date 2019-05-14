@@ -23,16 +23,25 @@ utils::Vector3 basic_pt(const Scene &scene, const Ray &ray, int depth, unsigned 
         else return texture.emission;
     }
     if (f.second == DIFF) {
-        double a = erand48(X);   // phong model
+        double a = erand48(X);
         double s = 1;
-        if(a < texture.rho_s)
-            s = texture.phong_s;
-        if(a >= texture.rho_d)
+        if(a < texture.rho_s) {
+            // phong specular
+            double phi = 2 * M_PI * erand48(X), r2 = erand48(X);
+            double cos_theta = pow(1 - r2, 1 / (1 + texture.phong_s));
+            double sin_theta = sqrt(1 - cos_theta * cos_theta);
+            Vector3 w = ray.direction.reflect(nl), u = ((fabs(w.x()) > .1 ? Vector3(0, 1) : Vector3(1)).cross(nl)).normalize(), v = w.cross(u).normalize();
+            Vector3 d = (u * cos(phi) * sin_theta + v * sin(phi) * sin_theta + w * cos_theta).normalize();
+            return texture.emission + f.first.mult(basic_pt(scene, Ray(x, d), depth, X));
+        }
+        else if(a < texture.rho_d) {
+            double r1 = 2 * M_PI * erand48(X), r2s = sqrt(erand48(X));
+            Vector3 w = nl, u = ((fabs(w.x()) > .1 ? Vector3(0, 1) : Vector3(1)).cross(nl)).normalize(), v = w.cross(u).normalize();
+            Vector3 d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2s * r2s)).normalize();
+            return texture.emission + f.first.mult(basic_pt(scene, Ray(x, d), depth, X));
+        }
+        else
             return texture.emission;
-        double r1 = 2 * M_PI * erand48(X), r2s = (pow(erand48(X), 1./(s + 1)));
-        Vector3 w = nl, u = ((fabs(w.x()) > .1 ? Vector3(0, 1) : Vector3(1)).cross(nl)).normalize(), v = w.cross(u);
-        Vector3 d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2s * r2s)).normalize();
-        return texture.emission + f.first.mult(basic_pt(scene, Ray(x, d), depth, X));
     } else if (f.second == SPEC)
         return texture.emission + f.first.mult(basic_pt(scene, Ray(x, ray.direction.reflect(nl)), depth, X));
     else {
