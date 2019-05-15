@@ -34,7 +34,7 @@ struct BRDF {
 };
 
 const BRDF BRDFs[] = {
-        {0, 1, 0, 0.7, 0, 0, 0}, // DIFFUSE
+        {0, 1, 0, 1, 0, 0, 0}, // DIFFUSE
         {1, 0, 0, 0, 0, 0, 0}, // MIRROR
         {0, 0, 1, 0, 0, 0, 1.65}, // GLASS
         {0, 1, 0, 0, 0, 0, 0}, // LIGHT
