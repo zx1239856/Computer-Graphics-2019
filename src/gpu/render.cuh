@@ -89,7 +89,7 @@ radiance(KernelArray<Sphere_GPU> &spheres, KernelArray<Cube_GPU> &cubes, KernelA
                     double sin_theta = sqrt(1 - cos_theta * cos_theta);
                     utils::Vector3 w = ray.direction.reflect(nl), u = ((fabs(w.x()) > .1 ? utils::Vector3(0, 1)
                                                                                          : utils::Vector3(1)).cross(
-                            nl)).normalize(), v = w.cross(u).normalize();
+                            w)).normalize(), v = w.cross(u).normalize();
                     utils::Vector3 d = (u * cos(phi) * sin_theta + v * sin(phi) * sin_theta +
                                         w * cos_theta).normalize();
                     r = Ray(x, d);

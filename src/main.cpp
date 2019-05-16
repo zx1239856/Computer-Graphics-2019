@@ -49,8 +49,9 @@ int main(int argc, char **argv) {
     //scene.addObject(new RotaryBezier(Vector3(297, 3, 197), ctrl_pnts, watercolor_texture));
     auto param = loadObject("../model/angel_lucy.obj");
     //scene.addObject(new TriangleMeshObject(utils::Vector3(330, 28, 50), 30., std::get<0>(param), std::get<1>(param), std::get<2>(param), Vector3(.75, .25, .25), Vector3(), BRDFs[DIFFUSE]));
-	scene.addObject(new TriangleMeshObject(utils::Vector3(300, 1-1.19, 130), 0.1, std::get<0>(param), std::get<1>(param), std::get<2>(param), Vector3(.75, .75, .75), Vector3(), BRDFs[METAL]));
-    int w = atoi(argv[2]), h = atoi(argv[3]);
+	//scene.addObject(new TriangleMeshObject(utils::Vector3(300, 1-1.19, 130), 0.1, std::get<0>(param), std::get<1>(param), std::get<2>(param), Vector3(.75, .75, .75), Vector3(), BRDFs[METAL]));
+    scene.addObject(new Sphere(Vector3(300, 13.1, 133), 13, Vector3(.75, .75, .75), Vector3(), BRDFs[METAL]));
+	int w = atoi(argv[2]), h = atoi(argv[3]);
     Camera cam(w, h);
     cam.setPosition(Vector3(150, 50, 295.6), Vector3(0.35, -0.030612, -0.4).normalize());
     cam.setLensParam(0.5135, 0., 310);

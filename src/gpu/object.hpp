@@ -23,7 +23,7 @@ struct Texture_GPU {
         CUDA_SAFE_CALL(cudaDestroyTextureObject(mapped_image));
     }
 
-    __host__ void setBRDF(const BRDF &brdf) {
+    __host__ __device__ void setBRDF(const BRDF &brdf) {
         specular = brdf.specular, diffuse = brdf.diffuse, refraction = brdf.refraction,
         rho_d = brdf.rho_d, rho_s = brdf.rho_s, phong_s = brdf.phong_s, re_idx = brdf.re_idx;
         // normalization
@@ -81,9 +81,8 @@ struct Sphere_GPU {
 
     Sphere_GPU(const utils::Vector3 &o, double r, const utils::Vector3 &_color, const utils::Vector3 &_emission,
                const BRDF &brdf) : origin(o), radius(r) {
-        texture.color = _color, texture.emission = _emission, texture.specular = brdf.specular,
-        texture.diffuse = brdf.diffuse, texture.refraction = brdf.refraction, texture.rho_d = brdf.rho_d,
-        texture.rho_s = brdf.rho_s, texture.phong_s = brdf.phong_s, texture.re_idx = brdf.re_idx;
+        texture.color = _color, texture.emission = _emission;
+        texture.setBRDF(brdf);
     }
 
     __device__ triplet<utils::Vector3, double, utils::Point2D>
@@ -124,9 +123,8 @@ struct Plane_GPU {
 
     Plane_GPU(const utils::Vector3 &norm, double dis, const utils::Vector3 &color, const utils::Vector3 &emission,
               const BRDF &brdf) : n(norm.normalize()), d(dis) {
-        texture.color = color, texture.emission = emission, texture.specular = brdf.specular,
-        texture.diffuse = brdf.diffuse, texture.refraction = brdf.refraction, texture.rho_d = brdf.rho_d,
-        texture.rho_s = brdf.rho_s, texture.phong_s = brdf.phong_s, texture.re_idx = brdf.re_idx;
+        texture.color = color, texture.emission = emission;
+        texture.setBRDF(brdf);
         preparePlaneObject(n, d, xp, yp, origin);
     }
 
@@ -166,9 +164,8 @@ struct Cube_GPU {
     Cube_GPU(const utils::Vector3 &_p0, const utils::Vector3 &_p1, const utils::Vector3 &color,
              const utils::Vector3 &emission,
              const BRDF &brdf) : p0(min(_p0, _p1)), p1(max(_p0, _p1)) {
-        texture.color = color, texture.emission = emission, texture.specular = brdf.specular,
-        texture.diffuse = brdf.diffuse, texture.refraction = brdf.refraction, texture.rho_d = brdf.rho_d,
-        texture.rho_s = brdf.rho_s, texture.phong_s = brdf.phong_s, texture.re_idx = brdf.re_idx;
+        texture.color = color, texture.emission = emission;
+        texture.setBRDF(brdf);
     }
 
     __device__ triplet<utils::Vector3, double, utils::Point2D>
@@ -207,9 +204,8 @@ struct RotaryBezier_GPU {
     RotaryBezier_GPU(const utils::Vector3 &_axis, const utils::Bezier2D_GPU &_bezier, const utils::Vector3 &color,
                      const utils::Vector3 &emission,
                      const BRDF &brdf) : axis(_axis), bezier(_bezier) {
-        texture.color = color, texture.emission = emission, texture.specular = brdf.specular,
-        texture.diffuse = brdf.diffuse, texture.refraction = brdf.refraction, texture.rho_d = brdf.rho_d,
-        texture.rho_s = brdf.rho_s, texture.phong_s = brdf.phong_s, texture.re_idx = brdf.re_idx;
+        texture.color = color, texture.emission = emission;
+        texture.setBRDF(brdf);
     }
 
     __device__ triplet<utils::Vector3, double, utils::Point2D>
@@ -254,9 +250,8 @@ struct TriangleMeshObject_GPU {
     TriangleMeshObject_GPU(const utils::Vector3 &_pos, double _ratio, const utils::KDTree_GPU &gpu_tree, const utils::Vector3 &color,
                      const utils::Vector3 &emission,
                      const BRDF &brdf) : pos(_pos), ratio(_ratio), kd_tree(gpu_tree) {
-        texture.color = color, texture.emission = emission, texture.specular = brdf.specular,
-        texture.diffuse = brdf.diffuse, texture.refraction = brdf.refraction, texture.rho_d = brdf.rho_d,
-        texture.rho_s = brdf.rho_s, texture.phong_s = brdf.phong_s, texture.re_idx = brdf.re_idx;
+        texture.color = color, texture.emission = emission;
+        texture.setBRDF(brdf);
     }
 
     __device__ triplet<utils::Vector3, double, utils::Point2D>

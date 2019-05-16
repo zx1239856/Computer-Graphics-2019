@@ -30,7 +30,7 @@ utils::Vector3 basic_pt(const Scene &scene, const Ray &ray, int depth, unsigned 
             double phi = 2 * M_PI * erand48(X), r2 = erand48(X);
             double cos_theta = pow(1 - r2, 1 / (1 + texture.phong_s));
             double sin_theta = sqrt(1 - cos_theta * cos_theta);
-            Vector3 w = ray.direction.reflect(nl), u = ((fabs(w.x()) > .1 ? Vector3(0, 1) : Vector3(1)).cross(nl)).normalize(), v = w.cross(u).normalize();
+            Vector3 w = ray.direction.reflect(nl), u = ((fabs(w.x()) > .1 ? Vector3(0, 1) : Vector3(1)).cross(w)).normalize(), v = w.cross(u).normalize();
             Vector3 d = (u * cos(phi) * sin_theta + v * sin(phi) * sin_theta + w * cos_theta).normalize();
             return texture.emission + f.first.mult(basic_pt(scene, Ray(x, d), depth, X));
         }
