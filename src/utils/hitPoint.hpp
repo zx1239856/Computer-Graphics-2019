@@ -103,7 +103,7 @@ public:
             pp1 = utils::max(pp1, x.p);
         }
         auto box = pp1 - pp0;
-        double irad = 4 * (box.x() + box.y() + box.z()) / (3. * (w + h));
+        double irad = (box.x() + box.y() + box.z()) / (3. * (w + h));
         for (auto &x : hit_pnts) {
             x.r_sqr = irad * irad;
         }

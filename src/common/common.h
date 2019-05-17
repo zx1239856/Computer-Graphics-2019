@@ -27,7 +27,7 @@ constexpr double PI_DOUBLED = M_PI + M_PI;
 constexpr double INF = 1e20;
 constexpr int RAY_TRACING_MAX_DEPTH = 10;
 constexpr int PATH_TRACING_MAX_DEPTH = 10;
-constexpr double SPPM_ALPHA = 0.7;
+constexpr double SPPM_ALPHA = 0.3;
 constexpr uint32_t NULL_NODE = std::numeric_limits<uint32_t>::max();
 
 enum SplitAxis {
@@ -52,7 +52,7 @@ const BRDF BRDFs[] = {
         {0, 1, 0, 1, 0, 0, 0}, // DIFFUSE
         {1, 0, 0, 0, 0, 0, 0}, // MIRROR
         {0, 0, 1, 0, 0, 0, 1.65}, // GLASS
-        {0, 1, 0, 0, 0, 0, 0}, // LIGHT
+        {0, 1, 0, 1, 0, 0, 0}, // LIGHT
         {0.1, 0.9, 0, 1, 0, 0, 0}, // CERAMIC
         {0, 1, 0, 0.8, 0.2, 10, 0}, // FLOOR
         {0, 1, 0, 1, 0, 0, 0}, // WALL

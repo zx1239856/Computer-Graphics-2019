@@ -6,6 +6,7 @@
 class Scene {
     std::vector<BasicObject *> objects;
     Ray light;  // for sppm use
+    double light_rad;
 public:
     Scene() : light(utils::Vector3(), utils::Vector3()) {}
 
@@ -21,11 +22,14 @@ public:
         double r1 = 2 * M_PI * erand48(X), r2s = sqrt(erand48(X));
         utils::Vector3 w = light.direction, u = ((fabs(w.x()) > .1 ? utils::Vector3(0, 1) : utils::Vector3(1)).cross(
                 light.direction)).normalize(), v = w.cross(u).normalize();
+        double theta = 2 * M_PI * erand48(X);
+        ray.origin = light.origin + (u * cos(theta) + v * sin(theta)) * erand48(X) * light_rad;
         ray.direction = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2s * r2s)).normalize();
         return ray;
     }
 
-    void setLight(const utils::Vector3 &src, const utils::Vector3 &dir = utils::Vector3(0, -1, 0)) {
+    void setLight(const utils::Vector3 &src, double light_r = 0.0, const utils::Vector3 &dir = utils::Vector3(0, -1, 0)) {
+    	light_rad = light_r;
         light.origin = src;
         light.direction = dir.normalize();
     }

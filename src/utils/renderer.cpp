@@ -121,10 +121,7 @@ void ray_trace(const Scene &scene, const Ray &ray, const utils::Vector3 &flux, c
                         norm)).normalize(), v = w.cross(
                         u).normalize();
                 Vector3 d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2s * r2s)).normalize();
-                auto p = color.first.max();
-                if (erand48(X) < p)
-                    ray_trace(scene, Ray(hit + d * EPSILON, d), new_flux / p, weight, depth + 1, X, tree, cam_pass,
-                              pixel_place);
+                ray_trace(scene, Ray(hit + d * EPSILON, d), new_flux, weight, depth + 1, X, tree, cam_pass, pixel_place);
             }
         }
     } else if (temp <= texture.brdf.refraction) {
@@ -153,7 +150,7 @@ void ray_trace(const Scene &scene, const Ray &ray, const utils::Vector3 &flux, c
 
 void evalRadiance(std::vector<utils::Vector3> &out, const utils::Vector3 &light, const int w, const int h,
                   const HitPointKDTree &tree,
-                  const int num_rounds, const int num_photons, const int super_sampling) {
+                  const int num_rounds, const int num_photons) {
     for (int v = 0; v < h; ++v) {
         for (int u = 0; u < w; ++u) {
             const auto &hp = tree.hit_pnts[v * w + u];

@@ -17,7 +17,7 @@ void ray_trace(const Scene &scene, const Ray &ray, const utils::Vector3 &flux, c
                HitPointKDTree &tree, const bool &cam_pass, const uint32_t &pixel_place);
 
 void evalRadiance(std::vector<utils::Vector3> &out, const utils::Vector3 &light, const int w, const int h, const HitPointKDTree &tree,
-                  const int num_rounds, const int num_photons, const int super_sampling);
+                  const int num_rounds, const int num_photons);
 
 void evalRadianceTest(std::vector<utils::Vector3> &out, const int w, const int h, const HitPointKDTree &tree);
 

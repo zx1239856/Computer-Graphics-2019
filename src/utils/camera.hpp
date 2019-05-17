@@ -76,19 +76,20 @@ public:
                         }
                     }
                     tree.hit_pnts[v * w + u].d = avg_d * -.25;*/
-                    ushort X[3] = {static_cast<ushort>(v * u), static_cast<ushort>(v * u + w + time(nullptr)),
+		    int sx = rounds & 1, sy = rounds & 2;
+                    ushort X[3] = {static_cast<ushort>(v * u + sx), static_cast<ushort>(v * u + w + time(nullptr) + sy),
                                    static_cast<ushort>(v * u * v * w + time(nullptr))};
                     double r1 = 2 * erand48(X), dx = r1 < 1 ? sqrt(r1) : 2 - sqrt(2 - r1);
                     double r2 = 2 * erand48(X), dy = r2 < 1 ? sqrt(r2) : 2 - sqrt(2 - r2);
-                    utils::Vector3 d = cx * (((.5 + dx) / 2 + u) / w - .5) +
-                                       cy * (((.5 + dy) / 2 + v) / h - .5) + direction;
+                    utils::Vector3 d = cx * (((sx + .5 + dx) / 2 + u) / w - .5) +
+                                               cy * (((sy + .5 + dy) / 2 + v) / h - .5) + direction;
                     double cos = d.normalize().dot(direction.normalize());
                     utils::Vector3 hit = origin + d * focal_dist / cos;  // real hit point on focal plane
+                    double theta = erand48(X) * M_PI * 2;
                     utils::Vector3 p_origin = origin +
-                                              (utils::Vector3(erand48(X) * 1.01, erand48(X), erand48(X)) - .5) *
+                                              (cx * std::cos(theta) + cy * std::sin(theta)) * erand48(X) *
                                               2 *
                                               aperture; // origin perturbation
-                    d = d.normalize();
                     tree.hit_pnts[v * w + u].d = -d;
                     ray_trace(*scene, Ray(p_origin, (hit - p_origin).normalize()), utils::Vector3(),
                               utils::Vector3(1, 1, 1), 0,
@@ -135,7 +136,7 @@ public:
             fprintf(stderr, "Hit Point with indirect flux: %d\t direct flux:%d\n\n", ccc, ccc2);
         }
         // eval radiance
-        evalRadiance(c, utils::Vector3(1, 1, 1), w, h, tree, num_rounds, num_photons, 4);
+        evalRadiance(c, utils::Vector3(1, 1, 1), w, h, tree, num_rounds, num_photons);
         //evalRadianceTest(c, w, h, tree);  // this is for ray cast test
         return c;
     }
@@ -166,11 +167,11 @@ public:
                                                cy * (((sy + .5 + dy) / 2 + v) / h - .5) + direction;
                             double cos = d.normalize().dot(direction.normalize());
                             utils::Vector3 hit = origin + d * focal_dist / cos;  // real hit point on focal plane
-                            utils::Vector3 p_origin = origin +
-                                                      (utils::Vector3(erand48(X) * 1.01, erand48(X), erand48(X)) - .5) *
-                                                      2 *
-                                                      aperture; // origin perturbation
-                            d = d.normalize();
+                            double theta = erand48(X) * M_PI * 2;
+                    utils::Vector3 p_origin = origin +
+                                              (cx * std::cos(theta) + cy * std::sin(theta)) * erand48(X) *
+                                              2 *
+                                              aperture; // origin perturbation
                             r = r + basic_pt(*scene, Ray(p_origin, (hit - p_origin).normalize()), 0, X, ray_cast) * (1. / samps);
                         }
                         c[(h - v - 1) * w + u] += r.clamp(0, 1) * .25;
