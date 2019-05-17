@@ -7,10 +7,16 @@
 #ifndef __NVCC__
 
 #include <cmath>
+#include <limits>
+#include <stdint.h>
 
 #else
 #define M_PI 3.14159265358979323846
 #endif
+
+inline double clampVal(double r, double lo = 0, double hi = 1) {
+    return r < lo ? lo : r > hi ? hi : r;
+}
 
 constexpr double EPSILON = 1e-6;
 constexpr double EPSILON_2 = 5e-5;
@@ -19,11 +25,20 @@ constexpr double EPSILON_3 = 3e-3;
 constexpr double EPSILON_KD = 1e-5;
 constexpr double PI_DOUBLED = M_PI + M_PI;
 constexpr double INF = 1e20;
+constexpr int RAY_TRACING_MAX_DEPTH = 10;
+constexpr int PATH_TRACING_MAX_DEPTH = 10;
+constexpr double SPPM_ALPHA = 0.7;
+constexpr uint32_t NULL_NODE = std::numeric_limits<uint32_t>::max();
+
+enum SplitAxis {
+    X_AXIS = 0, Y_AXIS, Z_AXIS
+};
+
 enum Refl_t {
     DIFF, SPEC, REFR
 }; // material type, DIFFuse, SPECular, REFRactive
 
-enum {
+enum BRDFType{
     DIFFUSE = 0, MIRROR, GLASS, LIGHT, CERAMIC, FLOOR, WALL, METAL
 };
 

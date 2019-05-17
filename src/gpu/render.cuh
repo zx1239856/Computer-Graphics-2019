@@ -137,7 +137,7 @@ __global__ void render_pt(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU>
                 utils::Vector3 hit = cam.origin + d * cam.focal_dist / cos;  // real hit point on focal plane
                 utils::Vector3 p_origin = cam.origin +
                                           (utils::Vector3(curand_uniform_double(&state) * 1.01,
-                                                          curand_uniform_double(&state)) - .5) * 2 *
+                                                          curand_uniform_double(&state), curand_uniform_double(&state)) - .5) * 2 *
                                           cam.aperture; // origin perturbation
                 r += radiance(spheres, cubes, planes, beziers, meshes, Ray(p_origin, (hit - p_origin).normalize()),
                               &state) *

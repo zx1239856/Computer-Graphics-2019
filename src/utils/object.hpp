@@ -15,24 +15,24 @@
 
 struct Texture {
     utils::Vector3 color, emission;
-    double specular, diffuse, refraction;
-    double rho_d, rho_s, phong_s;
-    double re_idx;
+    BRDF brdf;
     std::vector<std::vector<utils::Vector3>> mapped_image;
     utils::Transform2D mapped_transform;
 
     Texture(const utils::Vector3 &_color, const utils::Vector3 &_emission, double _specular, double _diffuse,
             double _refraction, double _rho_d, double _rho_s, double _phong_s, double _re_idx) :
-            color(_color), emission(_emission), specular(_specular), diffuse(_diffuse), refraction(_refraction),
-            rho_d(_rho_d), rho_s(_rho_s), phong_s(_phong_s), re_idx(_re_idx) {
+            color(_color), emission(_emission),
+            brdf{_specular, _diffuse, _refraction, _rho_d, _rho_s, _phong_s, _re_idx} {
         // normalization
-        double s = specular + diffuse + refraction;
-        specular /= s, diffuse /= s, refraction /= s;
-        diffuse += specular;
-        refraction += diffuse;
-        s = rho_s + rho_d;
-        rho_s /= s, rho_d /= s;
-        rho_d += rho_s;
+        double s = brdf.specular + brdf.diffuse + brdf.refraction;
+        brdf.specular /= s, brdf.diffuse /= s, brdf.refraction /= s;
+        brdf.diffuse += brdf.specular;
+        brdf.refraction += brdf.diffuse;
+        s = brdf.rho_s + brdf.rho_d;
+        if (s > EPSILON_2) {
+            brdf.rho_s /= s, brdf.rho_d /= s;
+            brdf.rho_d += brdf.rho_s;
+        }
     }
 
     Texture(const utils::Vector3 &_color, const utils::Vector3 &_emission, const BRDF &brdf) :
@@ -43,9 +43,9 @@ struct Texture {
         double prob = erand48(X);
         if (!mapped_image.size()) // no texture mapping. use default color
         {
-            if (prob < specular)
+            if (prob < brdf.specular)
                 return {color, SPEC};
-            else if (prob < diffuse)
+            else if (prob < brdf.diffuse)
                 return {color, DIFF};
             else
                 return {color, REFR};
@@ -55,9 +55,9 @@ struct Texture {
             int u = (lround(w * p.y + .5) % w + w) % w, v =
                     (lround(h * p.x + .5) % h + h) % h;
             auto color = mapped_image[v][u]; // 8 bit per channel, so color is in [0, 255]
-            if (prob < specular)
+            if (prob < brdf.specular)
                 return {color / 255. * 0.999, SPEC};
-            else if (prob < diffuse) {
+            else if (prob < brdf.diffuse) {
                 if ((color.x() >= 235 || color.y() >= 235 || color.z() >= 235) && erand48(X) < 0.13)
                     return {color / 255. * 0.999, SPEC};
                 else return {color / 255. * 0.999, DIFF};
@@ -229,7 +229,7 @@ public:
         auto r = ray;
         r.origin = (r.origin - pos) / ratio;
         auto res = kd_tree.singleRayStacklessIntersect(r);
-        if(res.first >= INF)
+        if (res.first >= INF)
             return {utils::Vector3(), INF, utils::Point2D()};
         auto hit_in_world = r.getVector(res.first) * ratio + pos;
         res.first = (std::abs(r.direction.x()) > std::abs(r.direction.y()) &&

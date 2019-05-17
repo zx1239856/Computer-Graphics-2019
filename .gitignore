@@ -42,4 +42,4 @@ cmake-build-debug/
 *.cubin
 *.fatbin
 
-build/
+build*/

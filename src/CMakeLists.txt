@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 project(hw2)
 
 set(CMAKE_CXX_STANDARD 14)
+if(NOT DEFINED CMAKE_BUILD_TYPE)
 set(CMAKE_BUILD_TYPE release)
+endif()
 
 set(CMAKE_CXX_FLAGS "-Wno-unused-but-set-variable -Wno-unused-parameter -Wno-sign-compare")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")

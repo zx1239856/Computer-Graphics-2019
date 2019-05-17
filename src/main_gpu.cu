@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
     Camera cam = {
             atoi(argv[2]), atoi(argv[3]),
             Vector3(150, 40, 295.6), Vector3(0.4, -0.008612, -0.35).normalize(),
-            0.6135, 0.2, 313
+            0.6135, 1.2, 313
     };
 
     // render

@@ -14,11 +14,7 @@
 
 namespace utils {
     constexpr uint32_t MAX_FACES_PER_NODE = 10;
-    constexpr uint32_t NULL_NODE = std::numeric_limits<uint32_t>::max();
 
-    enum SplitAxis {
-        X_AXIS = 0, Y_AXIS, Z_AXIS
-    };
     enum Side {
         LEFT = 0, RIGHT, BOTTOM, TOP, BACK, FRONT
     };

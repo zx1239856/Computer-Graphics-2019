@@ -32,8 +32,10 @@ struct Texture_GPU {
         diffuse += specular;
         refraction += diffuse;
         s = rho_s + rho_d;
-        rho_s /= s, rho_d /= s;
-        rho_d += rho_s;
+        if(s > EPSILON_2) {
+            rho_s /= s, rho_d /= s;
+            rho_d += rho_s;
+        }
     }
 
     __device__ pair<utils::Vector3, Refl_t>
