@@ -9,8 +9,8 @@
 void printUsage(char *name) {
 	printf("%s [ALGORITHM] [PARAMS]\n"
 		   "Format:\n PT [width] [height] [spp]\n"
-		   "SPPM [num_rounds] [width] [height] [num_rounds] [num_photons_per_round]\n", name);
-}
+		   "SPPM [width] [height] [num_rounds] [num_photons_per_round]\n", name);
+} 
 
 inline int toInt(double x) { return int(pow(clampVal(x), 1 / 2.2) * 255 + .5); }
 //inline int toInt(double x) { return int(clampVal(pow(1-exp(-x),1/2.2))*255+.5); }
