@@ -25,22 +25,30 @@ int main(int argc, char **argv) {
     planes_.emplace_back(Plane_GPU(Vector3(-1, 0, 0), 1, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL]));  // left
     //planes_.emplace_back(Plane_GPU(Vector3(1, 0, 0), 400, Vector3(.25, .25, .75), Vector3(), DIFF, 1.5)); // right
     planes_.emplace_back(Plane_GPU(Vector3(0, 0, 1), 500, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL]));  // front
-    planes_.emplace_back(Plane_GPU(Vector3(0, 0, -1), 0, Vector3(.25, .5, .75), Vector3(), BRDFs[WALL])); // back
-
+    
     cv::Mat _oilpainting = cv::imread("../texture/oil_painting.png");
     cv::Mat _watercolor = cv::imread("../texture/watercolor.jpg");
     cv::Mat _floor = cv::imread("../texture/floor.jpg");
+    cv::Mat _wall = cv::imread("../texture/wall.jpg");
     cudaTextureObject_t oilpainting = cvMat2CudaTexture(_oilpainting);
     cudaTextureObject_t watercolor = cvMat2CudaTexture(_watercolor);
     cudaTextureObject_t floor = cvMat2CudaTexture(_floor);
-    Texture_GPU oil_painting, watercolor_texture, floor_texture;
+    cudaTextureObject_t wall = cvMat2CudaTexture(_wall);
+    Texture_GPU oil_painting, watercolor_texture, floor_texture, wall_texture;
     floor_texture.color = Vector3(.75, .75, .75);
     floor_texture.emission = Vector3();
     floor_texture.setBRDF(BRDFs[WALL]);
     floor_texture.img_w = _floor.cols;
     floor_texture.img_h = _floor.rows;
     floor_texture.mapped_image = floor;
-    floor_texture.mapped_transform = Transform2D(0, -2 / 918., 2 / 1024., 0, 2, 0);
+    floor_texture.mapped_transform = Transform2D(0, -5 / 918., 5 / 1024., 0, 2, 0);
+    wall_texture.color = Vector3(.75, .75, .75);
+    wall_texture.emission = Vector3();
+    wall_texture.setBRDF(BRDFs[WALL]);
+    wall_texture.img_w = _wall.cols;
+    wall_texture.img_h = _wall.rows;
+    wall_texture.mapped_image = wall;
+    wall_texture.mapped_transform = Transform2D(0, -2 / 1350., 2 / 2400., 0, 0, 0);
     oil_painting.color = Vector3(.75, .75, .75);
     oil_painting.emission = Vector3();
     oil_painting.setBRDF(BRDFs[WALL]);
@@ -58,10 +66,10 @@ int main(int argc, char **argv) {
     watercolor_texture.mapped_transform = Transform2D(1 / M_PI, 0, 0, .5 / M_PI, 0, 0.25);
     //spheres_.emplace_back(Sphere_GPU(Vector3(280, 13, 103), 13, watercolor_texture));
     spheres_.emplace_back(Sphere_GPU(Vector3(265, 13, 100), 13, Vector3(.75, .75, .75), Vector3(), BRDFs[METAL]));
-    spheres_.emplace_back(Sphere_GPU(Vector3(285, 10, 140), 10, Vector3(.25, .75, .75), Vector3(), BRDFs[GLASS]));
-    spheres_.emplace_back(Sphere_GPU(Vector3(290, 6, 155), 6, Vector3(.35, .75, .25), Vector3(), BRDFs[GLASS]));
+    spheres_.emplace_back(Sphere_GPU(Vector3(285, 10, 140), 10, Vector3(.75, .9, .9), Vector3(), BRDFs[GLASS]));
+    spheres_.emplace_back(Sphere_GPU(Vector3(290, 6, 155), 6, Vector3(.75, .9, .65), Vector3(), BRDFs[GLASS]));
     spheres_.emplace_back(Sphere_GPU(Vector3(275, 3, 170), 3, Vector3(.75, .75, .35), Vector3(), BRDFs[GLASS]));
-
+    planes_.emplace_back(Plane_GPU(Vector3(0, 0, -1), 0, wall_texture)); // back
     planes_.emplace_back(Plane_GPU(Vector3(0, 1, 0), 0, floor_texture)); // bottom
     double xscale = 1.5, yscale = 1.5;
     std::vector<Point2D> ctrl_pnts = {{0. / xscale,  0. / yscale},

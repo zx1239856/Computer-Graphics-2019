@@ -11,7 +11,7 @@
 struct __align__(16) Camera{
         int w, h;
         utils::Vector3 origin, direction;
-        double fov, aperture, focal_dist; // camera intrincs
+        double fov, aperture, focal_dist; // camera intrinsics
 };
 
 __device__ inline triplet<utils::Vector3, double, pair<utils::Point2D, Texture_GPU*>>
