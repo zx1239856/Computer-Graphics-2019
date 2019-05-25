@@ -88,14 +88,13 @@ void ray_trace(const Scene &scene, const Ray &ray, const utils::Vector3 &flux, c
             n.dot(ray.direction) < 0 ? into = true, n : -n;
     const Texture &texture = obj->texture;
     auto color = texture.getColor(std::get<2>(intersect), X);
-    double temp = erand48(X);
     auto new_weight = weight.mult(color.first);
     auto new_flux = flux.mult(color.first);
     auto d_reflect = ray.direction.reflect(norm);
-    if (temp <= texture.brdf.specular) {
+    if (color.second == SPEC) {
         ray_trace(scene, Ray(hit + d_reflect * EPSILON, d_reflect), new_flux, new_weight, depth + 1, X, tree, cam_pass,
                   pixel_place);
-    } else if (temp <= texture.brdf.diffuse) {
+    } else if (color.second == DIFF) {
         double ac = erand48(X);
         if (ac <= texture.brdf.rho_s) {
             double phi = 2 * M_PI * erand48(X), r2 = erand48(X);
@@ -121,10 +120,10 @@ void ray_trace(const Scene &scene, const Ray &ray, const utils::Vector3 &flux, c
                         norm)).normalize(), v = w.cross(
                         u).normalize();
                 Vector3 d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2s * r2s)).normalize();
-                ray_trace(scene, Ray(hit + d * EPSILON, d), new_flux, weight, depth + 1, X, tree, cam_pass, pixel_place);
+                ray_trace(scene, Ray(hit + d * EPSILON, d), new_flux, new_weight, depth + 1, X, tree, cam_pass, pixel_place);
             }
         }
-    } else if (temp <= texture.brdf.refraction) {
+    } else if (color.second == REFR) {
         Ray reflray(hit + d_reflect * EPSILON, d_reflect);
         Vector3 d = ray.direction.refract(n, into ? 1 : texture.brdf.re_idx, into ? texture.brdf.re_idx : 1);
         if (d.len2() < EPSILON) // total internal reflection

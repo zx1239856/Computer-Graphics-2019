@@ -14,18 +14,14 @@ int main(int argc, char **argv) {
     std::vector<RotaryBezier_GPU> beziers_;
     std::vector<TriangleMeshObject_GPU> meshes_;
     spheres_.emplace_back(
-            Sphere_GPU(Vector3(150, 1e5, 181.6), 1e5, Vector3(.9, .9, .9), Vector3(), BRDFs[FLOOR])); //bottom
-    spheres_.emplace_back(
-            Sphere_GPU(Vector3(50, -1e5 + 381.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); // top
-    spheres_.emplace_back(
-            Sphere_GPU(Vector3(375, 16.5 + 8, 25), 16.5, Vector3(.9, .9, .75) * .999, Vector3(), BRDFs[GLASS]));
-    spheres_.emplace_back(Sphere_GPU(Vector3(250, 1181.6 - .9, 81.6), 800, Vector3(), Vector3(50, 50, 50),
+            Sphere_GPU(Vector3(50, -1e5 + 281.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); // top
+    spheres_.emplace_back(Sphere_GPU(Vector3(350, 1081.6 - 1.3, 181.6), 800, Vector3(), Vector3(50, 50, 50),
                                      BRDFs[LIGHT])); // top light
     Texture_GPU lightcube;
-    lightcube.re_idx = 1.3, lightcube.color = Vector3(0.85, 0.85, 0.7), lightcube.emission = Vector3(),
+    lightcube.re_idx = 1.3, lightcube.color = Vector3(.15, .35, .55), lightcube.emission = Vector3(),
             lightcube.setBRDF(BRDFs[DIFFUSE]);
     cubes_.emplace_back(
-            Cube_GPU(Vector3(350, 0, 0), Vector3(400, 8, 50), lightcube));
+            Cube_GPU(Vector3(340, 0, 0), Vector3(400, 5, 60), lightcube));
     planes_.emplace_back(Plane_GPU(Vector3(-1, 0, 0), 1, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL]));  // left
     //planes_.emplace_back(Plane_GPU(Vector3(1, 0, 0), 400, Vector3(.25, .25, .75), Vector3(), DIFF, 1.5)); // right
     planes_.emplace_back(Plane_GPU(Vector3(0, 0, 1), 500, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL]));  // front
@@ -33,9 +29,18 @@ int main(int argc, char **argv) {
 
     cv::Mat _oilpainting = cv::imread("../texture/oil_painting.png");
     cv::Mat _watercolor = cv::imread("../texture/watercolor.jpg");
+    cv::Mat _floor = cv::imread("../texture/floor.jpg");
     cudaTextureObject_t oilpainting = cvMat2CudaTexture(_oilpainting);
     cudaTextureObject_t watercolor = cvMat2CudaTexture(_watercolor);
-    Texture_GPU oil_painting, watercolor_texture;
+    cudaTextureObject_t floor = cvMat2CudaTexture(_floor);
+    Texture_GPU oil_painting, watercolor_texture, floor_texture;
+    floor_texture.color = Vector3(.75, .75, .75);
+    floor_texture.emission = Vector3();
+    floor_texture.setBRDF(BRDFs[WALL]);
+    floor_texture.img_w = _floor.cols;
+    floor_texture.img_h = _floor.rows;
+    floor_texture.mapped_image = floor;
+    floor_texture.mapped_transform = Transform2D(0, -2 / 918., 2 / 1024., 0, 2, 0);
     oil_painting.color = Vector3(.75, .75, .75);
     oil_painting.emission = Vector3();
     oil_painting.setBRDF(BRDFs[WALL]);
@@ -52,10 +57,13 @@ int main(int argc, char **argv) {
     watercolor_texture.mapped_image = watercolor;
     watercolor_texture.mapped_transform = Transform2D(1 / M_PI, 0, 0, .5 / M_PI, 0, 0.25);
     //spheres_.emplace_back(Sphere_GPU(Vector3(280, 13, 103), 13, watercolor_texture));
-    spheres_.emplace_back(Sphere_GPU(Vector3(260, 13, 133), 13, Vector3(.75, .75, .75), Vector3(), BRDFs[METAL]));
+    spheres_.emplace_back(Sphere_GPU(Vector3(265, 13, 100), 13, Vector3(.75, .75, .75), Vector3(), BRDFs[METAL]));
+    spheres_.emplace_back(Sphere_GPU(Vector3(285, 10, 140), 10, Vector3(.25, .75, .75), Vector3(), BRDFs[GLASS]));
+    spheres_.emplace_back(Sphere_GPU(Vector3(290, 6, 155), 6, Vector3(.35, .75, .25), Vector3(), BRDFs[GLASS]));
+    spheres_.emplace_back(Sphere_GPU(Vector3(275, 3, 170), 3, Vector3(.75, .75, .35), Vector3(), BRDFs[GLASS]));
 
-
-    double xscale = 2, yscale = 2;
+    planes_.emplace_back(Plane_GPU(Vector3(0, 1, 0), 0, floor_texture)); // bottom
+    double xscale = 1.5, yscale = 1.5;
     std::vector<Point2D> ctrl_pnts = {{0. / xscale,  0. / yscale},
                                       {13. / xscale, 0. / yscale},
                                       {30. / xscale, 10. / yscale},
@@ -69,13 +77,13 @@ int main(int argc, char **argv) {
 
     watercolor_texture.setBRDF(BRDFs[CERAMIC]);
     watercolor_texture.mapped_transform = Transform2D(-1., 0, 0, .5 / M_PI, 0, 0.25);
-    beziers_.emplace_back(RotaryBezier_GPU(Vector3(310, 3, 205), cpu_bezier.toGPU(), watercolor_texture));
+    beziers_.emplace_back(RotaryBezier_GPU(Vector3(370, 5.1, 30), cpu_bezier.toGPU(), watercolor_texture));
 
     auto param = loadObject("../model/angel_lucy.obj");
     KDTree cpu_tree(std::get<0>(param), std::get<1>(param), std::get<2>(param));
     KDTree_GPU gpu_tree = cpu_tree.toGPU();
     meshes_.emplace_back(
-            TriangleMeshObject_GPU(utils::Vector3(290, .5 - 1.19, 109), 0.1, gpu_tree, Vector3(.75, .75, .75), Vector3(),
+            TriangleMeshObject_GPU(utils::Vector3(345, .5 - 1.19, 169), 0.1, gpu_tree, Vector3(.75, .75, .75), Vector3(),
                                    BRDFs[DIFFUSE]));
 
     //debug_kernel<<<1,1>>>(convertToKernel(spheres), convertToKernel(cubes), convertToKernel(planes), convertToKernel(beziers));
@@ -85,7 +93,7 @@ int main(int argc, char **argv) {
     Camera cam = {
             atoi(argv[2]), atoi(argv[3]),
             Vector3(150, 40, 295.6), Vector3(0.4, -0.008612, -0.35).normalize(),
-            0.6135, 1.2, 313
+            0.5535, 3.2, 223
     };
 
     // render

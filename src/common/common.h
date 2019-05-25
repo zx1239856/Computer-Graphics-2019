@@ -27,7 +27,7 @@ constexpr double PI_DOUBLED = M_PI + M_PI;
 constexpr double INF = 1e20;
 constexpr int RAY_TRACING_MAX_DEPTH = 10;
 constexpr int PATH_TRACING_MAX_DEPTH = 10;
-constexpr double SPPM_ALPHA = 0.3;
+constexpr double SPPM_ALPHA = 0.7;
 constexpr uint32_t NULL_NODE = std::numeric_limits<uint32_t>::max();
 
 enum SplitAxis {
