@@ -19,8 +19,8 @@ utils::Vector3 basic_pt(const Scene &scene, const Ray &ray, int depth, unsigned 
     if (p < EPSILON)
         return ray_cast ? Vector3() : texture.emission;
     if (++depth > PATH_TRACING_MAX_DEPTH) {
-        if (erand48(X) < p)f.first = f.first * (1 / p);
-        return ray_cast ? Vector3() : texture.emission;
+        if (erand48(X) < p)f.first *= (1 / p);
+        else return ray_cast ? Vector3() : texture.emission;
     }
     if (f.second == DIFF) {
         double a = erand48(X);
@@ -40,8 +40,7 @@ utils::Vector3 basic_pt(const Scene &scene, const Ray &ray, int depth, unsigned 
                     u).normalize();
             Vector3 d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2s * r2s)).normalize();
             if (!ray_cast)
-                return (ray_cast ? Vector3() : texture.emission) +
-                       f.first.mult(basic_pt(scene, Ray(x, d), depth, X, ray_cast));
+                return texture.emission + f.first.mult(basic_pt(scene, Ray(x, d), depth, X, ray_cast));
             else
                 return f.first;
         } else
@@ -100,7 +99,7 @@ void ray_trace(const Scene &scene, const Ray &ray, const utils::Vector3 &flux, c
             double phi = 2 * M_PI * erand48(X), r2 = erand48(X);
             double cos_theta = pow(1 - r2, 1 / (1 + texture.brdf.phong_s));
             double sin_theta = sqrt(1 - cos_theta * cos_theta);
-            Vector3 w = ray.direction.reflect(norm), u = ((fabs(w.x()) > .1 ? Vector3(0, 1) : Vector3(1)).cross(
+            Vector3 w = d_reflect, u = ((fabs(w.x()) > .1 ? Vector3(0, 1) : Vector3(1)).cross(
                     w)).normalize(), v = w.cross(u).normalize();
             Vector3 d = (u * cos(phi) * sin_theta + v * sin(phi) * sin_theta + w * cos_theta).normalize();
             ray_trace(scene, Ray(hit + d * EPSILON, d), new_flux, new_weight, depth + 1, X, tree, cam_pass,

@@ -38,8 +38,8 @@ int main(int argc, char **argv) {
     cv::Mat _watercolor = cv::imread("../texture/watercolor.jpg");
     Texture watercolor_texture(Vector3(.9, .9, .9) * .999, Vector3(), BRDFs[WALL]);
     watercolor_texture.mapped_image = cvMat2Arr(_watercolor);
-    watercolor_texture.mapped_transform = utils::Transform2D(1 / M_PI, 0, 0, .5 / M_PI, 0, 0.25);
-    scene.addObject(new Sphere(Vector3(330, 20, 150), 20, watercolor_texture));
+    watercolor_texture.mapped_transform = utils::Transform2D(1 / M_PI, 0, 0, .5 / M_PI, 0, -0.1);
+    //scene.addObject(new Sphere(Vector3(330, 20, 150), 20, watercolor_texture));
 
 	cv::Mat _oilpainting = cv::imread("../texture/oil_painting.png");
     Texture oilpainting_texture(Vector3(.9, .9, .5) * .999, Vector3(), BRDFs[DIFFUSE]);
@@ -60,9 +60,9 @@ int main(int argc, char **argv) {
                                       {10. / xscale, 70. / yscale},
                                       {20. / xscale, 80. / yscale}};
     oilpainting_texture.mapped_transform = utils::Transform2D(-1., 0, 0, .5/M_PI, 0, 0.25);
-    scene.addObject(new RotaryBezier(Vector3(370, 5.5, 30), ctrl_pnts, Vector3(.25, .35, .75), Vector3(), BRDFs[DIFFUSE]));
-    //auto param = loadObject("../model/angel_lucy.obj");
-    //scene.addObject(new TriangleMeshObject(utils::Vector3(330, 1-1.19, 160), 0.1, std::get<0>(param), std::get<1>(param), std::get<2>(param), Vector3(.75, .75, .75), Vector3(), BRDFs[DIFFUSE]));
+    scene.addObject(new RotaryBezier(Vector3(370, 5.5, 30), ctrl_pnts, watercolor_texture));
+    auto param = loadObject("../model/angel_lucy.obj");
+    scene.addObject(new TriangleMeshObject(utils::Vector3(330, 1-1.19, 160), 0.1, std::get<0>(param), std::get<1>(param), std::get<2>(param), Vector3(.75, .75, .75), Vector3(), BRDFs[DIFFUSE]));
     //scene.addObject(new Sphere(Vector3(320, 10.1, 153), 10, Vector3(.9, .9, .9), Vector3(), BRDFs[METAL]));
     scene.addObject(new Sphere(Vector3(270, 10.1, 100), 10, Vector3(.75, .9, .9), Vector3(), BRDFs[GLASS]));
     scene.addObject(new Sphere(Vector3(280, 7.1, 120), 7, Vector3(.9, .9, .75), Vector3(), BRDFs[GLASS]));
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 	int w = atoi(argv[3]), h = atoi(argv[4]);
     Camera cam(w, h);
     cam.setPosition(Vector3(150, 50, 295.6), Vector3(0.35, -0.030612, -0.4).normalize());
-    cam.setLensParam(0.5135, 3., 230);
+    cam.setLensParam(0.5135, 2.3, 235);
     cam.setScene(&scene);
     std::vector<utils::Vector3> res;
     if(alg == "PT") {

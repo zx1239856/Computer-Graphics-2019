@@ -56,16 +56,16 @@ struct Texture_GPU {
             int u = (lround(w * p.y + .5) % w + w) % w, v =
                     (lround(h * p.x + .5) % h + h) % h;
             uchar4 cc = tex1Dfetch<uchar4>(mapped_image, v * w + u);
-            auto color = utils::Vector3(cc.x / 255. * 0.999, cc.y / 255. * 0.999,
+            auto n_color = utils::Vector3(cc.x / 255. * 0.999, cc.y / 255. * 0.999,
                                         cc.z / 255. * 0.999); // 8 bit per channel, so color is in [0, 255]
             if (prob < specular)
-                return {color, SPEC};
+                return {n_color, SPEC};
             else if (prob < diffuse) {
                 if ((cc.x >= 235 || cc.y >= 235 || cc.z >= 235) && curand_uniform_double(state) < 0.13)
-                    return {color, SPEC};
-                else return {color, DIFF};
+                    return {n_color, SPEC};
+                else return {n_color, DIFF};
             } else
-                return {color, REFR};
+                return {n_color, REFR};
         }
     }
 };

@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
     std::vector<TriangleMeshObject_GPU> meshes_;
     spheres_.emplace_back(
             Sphere_GPU(Vector3(50, -1e5 + 281.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); // top
-    spheres_.emplace_back(Sphere_GPU(Vector3(350, 1081.6 - 1.3, 181.6), 800, Vector3(), Vector3(50, 50, 50),
+    spheres_.emplace_back(Sphere_GPU(Vector3(350, 1081.6 - 1.3, 231.6), 800, Vector3(), Vector3(60, 60, 60),
                                      BRDFs[LIGHT])); // top light
     Texture_GPU lightcube;
     lightcube.re_idx = 1.3, lightcube.color = Vector3(.15, .35, .55), lightcube.emission = Vector3(),
@@ -66,9 +66,9 @@ int main(int argc, char **argv) {
     watercolor_texture.mapped_transform = Transform2D(1 / M_PI, 0, 0, .5 / M_PI, 0, 0.25);
     //spheres_.emplace_back(Sphere_GPU(Vector3(280, 13, 103), 13, watercolor_texture));
     spheres_.emplace_back(Sphere_GPU(Vector3(265, 13, 100), 13, Vector3(.75, .75, .75), Vector3(), BRDFs[METAL]));
-    spheres_.emplace_back(Sphere_GPU(Vector3(285, 10, 140), 10, Vector3(.75, .9, .9), Vector3(), BRDFs[GLASS]));
-    spheres_.emplace_back(Sphere_GPU(Vector3(290, 6, 155), 6, Vector3(.75, .9, .65), Vector3(), BRDFs[GLASS]));
-    spheres_.emplace_back(Sphere_GPU(Vector3(275, 3, 170), 3, Vector3(.75, .75, .35), Vector3(), BRDFs[GLASS]));
+    spheres_.emplace_back(Sphere_GPU(Vector3(300, 10, 200), 10, Vector3(.75, .9, .9), Vector3(), BRDFs[GLASS]));
+    spheres_.emplace_back(Sphere_GPU(Vector3(280, 8, 135), 8, Vector3(.75, .9, .65), Vector3(), BRDFs[GLASS]));
+    spheres_.emplace_back(Sphere_GPU(Vector3(270, 5, 155), 5, Vector3(.75, .75, .35), Vector3(), BRDFs[GLASS]));
     planes_.emplace_back(Plane_GPU(Vector3(0, 0, -1), 0, wall_texture)); // back
     planes_.emplace_back(Plane_GPU(Vector3(0, 1, 0), 0, floor_texture)); // bottom
     double xscale = 1.5, yscale = 1.5;
@@ -83,7 +83,6 @@ int main(int argc, char **argv) {
                                       {20. / xscale, 80. / yscale}};
     Bezier2D cpu_bezier(ctrl_pnts);
 
-    watercolor_texture.setBRDF(BRDFs[CERAMIC]);
     watercolor_texture.mapped_transform = Transform2D(-1., 0, 0, .5 / M_PI, 0, 0.25);
     beziers_.emplace_back(RotaryBezier_GPU(Vector3(370, 5.1, 30), cpu_bezier.toGPU(), watercolor_texture));
 
@@ -101,7 +100,7 @@ int main(int argc, char **argv) {
     Camera cam = {
             atoi(argv[2]), atoi(argv[3]),
             Vector3(150, 40, 295.6), Vector3(0.4, -0.008612, -0.35).normalize(),
-            0.5535, 3.2, 223
+            0.5535, 3.3, 223
     };
 
     // render

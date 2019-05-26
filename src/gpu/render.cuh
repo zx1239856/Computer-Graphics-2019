@@ -43,11 +43,7 @@ radiance(KernelArray<Sphere_GPU> &spheres, KernelArray<Cube_GPU> &cubes, KernelA
         L += F.mult(res.third.second->emission);
         F = F.mult(prop.first);
         double p = prop.first.max();
-        if (++depth > 5) {
-            if (curand_uniform_double(state) < p)
-                F /= p;
-            else return L;
-        }
+
         bool into = false;
         utils::Vector3 x = r.getVector(res.second), nl =
                 res.first.dot(r.direction) < 0 ? into = true, res.first : -res.first;
@@ -87,7 +83,7 @@ radiance(KernelArray<Sphere_GPU> &spheres, KernelArray<Cube_GPU> &cubes, KernelA
                     double phi = 2 * M_PI * curand_uniform_double(state), r2 = curand_uniform_double(state);
                     double cos_theta = pow(1 - r2, 1 / (1 + texture->phong_s));
                     double sin_theta = sqrt(1 - cos_theta * cos_theta);
-                    utils::Vector3 w = ray.direction.reflect(nl), u = ((fabs(w.x()) > .1 ? utils::Vector3(0, 1)
+                    utils::Vector3 w = reflray.direction, u = ((fabs(w.x()) > .1 ? utils::Vector3(0, 1)
                                                                                          : utils::Vector3(1)).cross(
                             w)).normalize(), v = w.cross(u).normalize();
                     utils::Vector3 d = (u * cos(phi) * sin_theta + v * sin(phi) * sin_theta +
@@ -96,12 +92,17 @@ radiance(KernelArray<Sphere_GPU> &spheres, KernelArray<Cube_GPU> &cubes, KernelA
                 } else if (a < texture->rho_d) {
                     double r1 = 2 * M_PI * curand_uniform_double(state), r2s = sqrt(curand_uniform_double(state));
                     utils::Vector3 w = nl, u = ((fabs(w.x()) > .1 ? utils::Vector3(0, 1) : utils::Vector3(1)).cross(
-                            nl)).normalize(), v = w.cross(u).normalize();
+                            w)).normalize(), v = w.cross(u).normalize();
                     utils::Vector3 d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2s * r2s)).normalize();
                     r = Ray(x, d);
                 } else return L;
             }
                 break;
+        }
+	if (++depth > PATH_TRACING_MAX_DEPTH) {
+            if (curand_uniform_double(state) < p)
+                F /= p;
+            else return L;
         }
     }
 }
@@ -135,10 +136,9 @@ __global__ void render_pt(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU>
                                    cy * (((sy + .5 + dy) / 2 + v) / cam.h - .5) + cam.direction;
                 double cos = d.normalize().dot(cam.direction);
                 utils::Vector3 hit = cam.origin + d * cam.focal_dist / cos;  // real hit point on focal plane
+                double theta = curand_uniform_double(&state) * M_PI * 2;
                 utils::Vector3 p_origin = cam.origin +
-                                          (utils::Vector3(curand_uniform_double(&state) * 1.01,
-                                                          curand_uniform_double(&state), curand_uniform_double(&state)) - .5) * 2 *
-                                          cam.aperture; // origin perturbation
+                                              (cx.normalize() * std::cos(theta) + cy.normalize() * std::sin(theta)) * curand_uniform_double(&state) * cam.aperture; // origin perturbation
                 r += radiance(spheres, cubes, planes, beziers, meshes, Ray(p_origin, (hit - p_origin).normalize()),
                               &state) *
                      (1. / samps);

@@ -87,9 +87,7 @@ public:
                     utils::Vector3 hit = origin + d * focal_dist / cos;  // real hit point on focal plane
                     double theta = erand48(X) * M_PI * 2;
                     utils::Vector3 p_origin = origin +
-                                              (cx * std::cos(theta) + cy * std::sin(theta)) * erand48(X) *
-                                              2 *
-                                              aperture; // origin perturbation
+                                              (cx.normalize() * std::cos(theta) + cy.normalize() * std::sin(theta)) * erand48(X) * aperture; // origin perturbation
                     tree.hit_pnts[v * w + u].d = -d;
                     ray_trace(*scene, Ray(p_origin, (hit - p_origin).normalize()), utils::Vector3(),
                               utils::Vector3(1, 1, 1), 0,
@@ -167,11 +165,10 @@ public:
                                                cy * (((sy + .5 + dy) / 2 + v) / h - .5) + direction;
                             double cos = d.normalize().dot(direction.normalize());
                             utils::Vector3 hit = origin + d * focal_dist / cos;  // real hit point on focal plane
-                            double theta = erand48(X) * M_PI * 2;
+                    double theta = erand48(X) * M_PI * 2;
                     utils::Vector3 p_origin = origin +
-                                              (cx * std::cos(theta) + cy * std::sin(theta)) * erand48(X) *
-                                              2 *
-                                              aperture; // origin perturbation
+                                              (cx.normalize() * std::cos(theta) + cy.normalize() * std::sin(theta)) * erand48(X) * aperture; // origin perturbation
+
                             r = r + basic_pt(*scene, Ray(p_origin, (hit - p_origin).normalize()), 0, X, ray_cast) * (1. / samps);
                         }
                         c[(h - v - 1) * w + u] += r.clamp(0, 1) * .25;
