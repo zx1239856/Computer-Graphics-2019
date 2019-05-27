@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
     Bezier2D cpu_bezier(ctrl_pnts);
 
     watercolor_texture.mapped_transform = Transform2D(-1., 0, 0, .5 / M_PI, 0, 0.25);
-    beziers_.emplace_back(RotaryBezier_GPU(Vector3(370, 5.1, 30), cpu_bezier.toGPU(), watercolor_texture));
+    beziers_.emplace_back(RotaryBezier_GPU(Vector3(370, 5.5, 30), cpu_bezier.toGPU(), watercolor_texture));
 
     auto param = loadObject("../model/angel_lucy.obj");
     KDTree cpu_tree(std::get<0>(param), std::get<1>(param), std::get<2>(param));

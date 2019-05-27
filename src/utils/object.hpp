@@ -198,10 +198,10 @@ public:
     }
 
     virtual std::pair<utils::Vector3, utils::Vector3> boundingBox() const override {
-        return {utils::Vector3(-bezier.xMax() + axis.x() - 0.5, bezier.yMin() + axis.y() - 0.5,
-                               -bezier.xMax() + axis.z() - 0.5),
-                utils::Vector3(bezier.xMax() + axis.x() + 0.5, bezier.yMax() + axis.y() + 0.5,
-                               bezier.xMax() + axis.z() + 0.5)};
+        return {utils::Vector3(-bezier.xMax() + axis.x() - EPSILON, bezier.yMin() + axis.y() - EPSILON,
+                               -bezier.xMax() + axis.z() - EPSILON),
+                utils::Vector3(bezier.xMax() + axis.x() + EPSILON, bezier.yMax() + axis.y() + EPSILON,
+                               bezier.xMax() + axis.z() + EPSILON)};
     }
 
     virtual utils::Vector3 norm(const utils::Vector3 &vec, const utils::Point2D &surface_coord) const override {

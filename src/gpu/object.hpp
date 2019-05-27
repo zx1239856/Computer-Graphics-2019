@@ -221,10 +221,10 @@ struct RotaryBezier_GPU {
     __device__ pair<utils::Vector3, utils::Vector3>
 
     boundingBox() const {
-        return {utils::Vector3(-bezier.xmax + axis.x() - 0.5, bezier.ymin + axis.y() - 0.5,
-                               -bezier.xmax + axis.z() - 0.5),
-                utils::Vector3(bezier.xmax + axis.x() + 0.5, bezier.ymax + axis.y() + 0.5,
-                               bezier.xmax + axis.z() + 0.5)};
+        return {utils::Vector3(-bezier.xmax + axis.x() - EPSILON, bezier.ymin + axis.y() - EPSILON,
+                               -bezier.xmax + axis.z() - EPSILON),
+                utils::Vector3(bezier.xmax + axis.x() + EPSILON, bezier.ymax + axis.y() + EPSILON,
+                               bezier.xmax + axis.z() + EPSILON)};
     }
 
     __device__ utils::Vector3
