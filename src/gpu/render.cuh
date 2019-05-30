@@ -43,6 +43,12 @@ radiance(KernelArray<Sphere_GPU> &spheres, KernelArray<Cube_GPU> &cubes, KernelA
         L += F.mult(res.third.second->emission);
         F = F.mult(prop.first);
         double p = prop.first.max();
+        
+        if (++depth > PATH_TRACING_MAX_DEPTH) {
+            if (curand_uniform_double(state) < p)
+                F /= p;
+            else return L;
+        }
 
         bool into = false;
         utils::Vector3 x = r.getVector(res.second), nl =
@@ -98,11 +104,6 @@ radiance(KernelArray<Sphere_GPU> &spheres, KernelArray<Cube_GPU> &cubes, KernelA
                 } else return L;
             }
                 break;
-        }
-	if (++depth > PATH_TRACING_MAX_DEPTH) {
-            if (curand_uniform_double(state) < p)
-                F /= p;
-            else return L;
         }
     }
 }
