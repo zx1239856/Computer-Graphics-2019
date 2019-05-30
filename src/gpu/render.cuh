@@ -110,7 +110,7 @@ radiance(KernelArray<Sphere_GPU> &spheres, KernelArray<Cube_GPU> &cubes, KernelA
 __global__ void render_pt(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU> cubes, KernelArray<Plane_GPU> planes,
                           KernelArray<RotaryBezier_GPU> beziers, KernelArray<TriangleMeshObject_GPU> meshes, Camera cam,
                           int samps,
-                          KernelArray<utils::Vector3> out_buffer) {
+                          KernelArray<utils::Vector3> out_buffer, const utils::Vector3 cx, const utils::Vector3 cy) {
     const uint32_t u = threadIdx.x + blockIdx.x * blockDim.x;
     const uint32_t v = threadIdx.y + blockIdx.y * blockDim.y;
     const uint32_t pos = u + v * blockDim.x * gridDim.x;
@@ -119,12 +119,6 @@ __global__ void render_pt(KernelArray<Sphere_GPU> spheres, KernelArray<Cube_GPU>
     }
     curandState state;
     curand_init(pos, 0u, 0u, &state);
-
-    utils::Vector3 cx = utils::Vector3(-cam.direction.z(), 0, cam.direction.x());
-    if (cx.len2() < EPSILON) {
-        cx = utils::Vector3(1, 0, 0) * cam.w / cam.h * cam.fov;  // camera pointing towards y-axis
-    } else cx = cx.normalize() * cam.w / cam.h * cam.fov;
-    utils::Vector3 cy = cx.cross(cam.direction).normalize() * cam.fov;
 
     for (int sy = 0; sy < 2; ++sy) {  // 2x2 super sampling
         for (int sx = 0; sx < 2; ++sx) {
@@ -154,6 +148,12 @@ render_wrapper(const dim3 &nblocks, const dim3 &nthreads, KernelArray<Sphere_GPU
                KernelArray<RotaryBezier_GPU> beziers, KernelArray<TriangleMeshObject_GPU> meshes, Camera cam,
                int samps,
                KernelArray<utils::Vector3> out_buffer) {
+    utils::Vector3 cx = utils::Vector3(-cam.direction.z(), 0, cam.direction.x());
+    if (cx.len2() < EPSILON) {
+        cx = utils::Vector3(1, 0, 0) * cam.w / cam.h * cam.fov;  // camera pointing towards y-axis
+    } else cx = cx.normalize() * cam.w / cam.h * cam.fov;
+    utils::Vector3 cy = cx.cross(cam.direction).normalize() * cam.fov;
     render_pt << < nblocks, nthreads >> >
-                            (spheres, cubes, planes, beziers, meshes, cam, samps, out_buffer);
+                            (spheres, cubes, planes, beziers, meshes, cam, samps, out_buffer, cx, cy);
+    cudaDeviceSynchronize();
 }

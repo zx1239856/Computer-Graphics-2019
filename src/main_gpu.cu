@@ -5,8 +5,10 @@
 
 int main(int argc, char **argv) {
     using namespace utils;
-    if (argc != 4)
+    if (argc != 5) {
+	printf("Usage: %s [OUT_FILE] [WIDTH] [HEIGHT] [SPP]\n", argv[0]);
         return 0;
+    }
     printDeviceProperty();
     std::vector<Sphere_GPU> spheres_;
     std::vector<Cube_GPU> cubes_;
@@ -104,15 +106,15 @@ int main(int argc, char **argv) {
     };
 
     // render
-    const dim3 nblocks(cam.w / 16u, cam.h / 16u);
+    const dim3 nblocks(cam.w / 16u + 1, cam.h / 16u + 1);
     const dim3 nthreads(16u, 16u);
     KernelArray<utils::Vector3> gpu_out = createKernelArr<utils::Vector3>(static_cast<size_t>(cam.w * cam.h));
     printf("Memory copied to GPU, now start executing render kernel...\n");
     render_wrapper(nblocks, nthreads, makeKernelArr(spheres_), makeKernelArr(cubes_), makeKernelArr(planes_), makeKernelArr(
-                                    beziers_), makeKernelArr(meshes_), cam, atoi(argv[1]) / 4, gpu_out);
+                                    beziers_), makeKernelArr(meshes_), cam, atoi(argv[4]) / 4, gpu_out);
     std::vector<Vector3> res = makeStdVector(gpu_out);
     releaseKernelArr(gpu_out);
-    FILE *f = fopen("image.ppm", "w");
+    FILE *f = fopen(argv[1], "w");
     fprintf(f, "P3\n%d %d\n%d\n", cam.w, cam.h, 255);
     for (int i = 0; i < cam.w * cam.h; ++i)
         fprintf(f, "%d %d %d ", toUInt8(res[i].x()), toUInt8(res[i].y()), toUInt8(res[i].z()));
