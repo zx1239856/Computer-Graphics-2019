@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
     watercolor_texture.mapped_transform = Transform2D(1 / M_PI, 0, 0, .5 / M_PI, 0, 0.25);
     //spheres_.emplace_back(Sphere_GPU(Vector3(280, 13, 103), 13, watercolor_texture));
     spheres_.emplace_back(Sphere_GPU(Vector3(265, 13, 100), 13, Vector3(.75, .75, .75), Vector3(), BRDFs[METAL]));
-    spheres_.emplace_back(Sphere_GPU(Vector3(300, 10, 200), 10, Vector3(.75, .9, .9), Vector3(), BRDFs[GLASS]));
+    spheres_.emplace_back(Sphere_GPU(Vector3(310, 10, 210), 10, Vector3(.75, .9, .9), Vector3(), BRDFs[GLASS]));
     spheres_.emplace_back(Sphere_GPU(Vector3(280, 8, 135), 8, Vector3(.75, .9, .65), Vector3(), BRDFs[GLASS]));
     spheres_.emplace_back(Sphere_GPU(Vector3(270, 5, 155), 5, Vector3(.75, .75, .35), Vector3(), BRDFs[GLASS]));
     planes_.emplace_back(Plane_GPU(Vector3(0, 0, -1), 0, wall_texture)); // back

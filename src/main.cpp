@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
     scene.addObject(
             new Sphere(Vector3(50, -1e5 + 251.6, 81.6), 1e5, Vector3(.75, .75, .75), Vector3(), BRDFs[WALL])); //top
     //scene.addObject(new Sphere(Vector3(373, 16.5, 78), 16.5, Vector3(.9, .9, .5) * .999, Vector3(), BRDFs[GLASS]));
-    scene.addObject(new Sphere(Vector3(300, 851.6 - .63, 183), 600, Vector3(), Vector3(55, 55, 55), BRDFs[LIGHT])); // light
+    scene.addObject(new Sphere(Vector3(300, 851.6 - .93, 183), 600, Vector3(), Vector3(55, 55, 55), BRDFs[LIGHT])); // light
     //scene.addObject(new Cube(Vector3(267, 30, 167), Vector3(327, 30.5, 227), Vector3(.75, .75, .75), Vector3(), DIFF, 1.5));
     scene.setLight(Vector3(300, 251.6 - 1, 183), 30, Vector3(0, -1, 0));
 

@@ -295,7 +295,8 @@ public:
         }
 
         uint32_t
-        buildTree(std::vector<uint32_t> &&tri_list, const utils::Vector3 &p0, const utils::Vector3 &p1, int depth) {
+        buildTree(std::vector<uint32_t> &&tri_list, const utils::Vector3 &p0, const utils::Vector3 &p1, int depth,
+                  SplitAxis axis) {
             uint32_t node = mem.acquire();
             mem[node].tri_list = std::move(tri_list);
             //auto aabb = getTightAABB(mem[node].tri_list);
@@ -306,13 +307,13 @@ public:
 
             total_tris_in_node += size;
 
-            if (size < MAX_FACES_PER_NODE) {
+            if (size < MAX_FACES_PER_NODE || depth > 30) {
                 if (depth > num_level)
                     num_level = depth;
                 ++num_leaves;
                 return node;
             }
-            // divide along the longest side
+            /*// divide along the longest side
             auto diff = p1 - p0;
             SplitAxis longest = (diff.x() > diff.y() && diff.x() > diff.z()) ? X_AXIS : ((diff.y() > diff.z()) ? Y_AXIS
                                                                                                                : Z_AXIS);
@@ -339,11 +340,37 @@ public:
             else if (longest == Y_AXIS)
                 lp1.y() = rp0.y() = mid;
             else
+                lp1.z() = rp0.z() = mid;*/
+            double mid = 0;
+            if (axis == X_AXIS)
+                mid = (p0.x() + p1.x()) / 2;
+            else if (axis == Y_AXIS)
+                mid = (p0.y() + p1.y()) / 2;
+            else
+                mid = (p0.z() + p1.z()) / 2;
+            mem[node].split_axis = axis;
+            mem[node].split_pos = mid;
+            std::vector<uint32_t> left_tris, right_tris;
+            for (const auto &x : mem[node].tri_list) {
+                if (getMinTriFaceVal(x, axis) < mid)
+                    left_tris.emplace_back(x);
+                if (getMaxTriFaceVal(x, axis) >= mid)
+                    right_tris.emplace_back(x);
+            }
+
+            utils::Vector3 lp1 = p1, rp0 = p0;
+            if (axis == X_AXIS)
+                lp1.x() = rp0.x() = mid;
+            else if (axis == Y_AXIS)
+                lp1.y() = rp0.y() = mid;
+            else
                 lp1.z() = rp0.z() = mid;
 
-            auto v1 = buildTree(std::move(left_tris), p0, lp1, depth + 1);
+            mem[node].tri_list.clear();
+
+            auto v1 = buildTree(std::move(left_tris), p0, lp1, depth + 1, static_cast<SplitAxis>((axis + 1) % 3));
             mem[node].left = v1;
-            auto v2 = buildTree(std::move(right_tris), rp0, p1, depth + 1);
+            auto v2 = buildTree(std::move(right_tris), rp0, p1, depth + 1, static_cast<SplitAxis>((axis + 1) % 3));
             mem[node].right = v2;
 
             return node;
@@ -535,7 +562,7 @@ public:
             for (uint32_t i = 0; i < faces_.size(); ++i)
                 tri_list.emplace_back(i);
             auto aabb = getTightAABB(vertices_);
-            root = buildTree(std::move(tri_list), aabb.first, aabb.second, 1);
+            root = buildTree(std::move(tri_list), aabb.first, aabb.second, 1, X_AXIS);
             buildRopeStructure();
             printf("KD-Tree construction finished with %lu vertices and %lu faces,\nTotal nodes: %lu, leaf nodes: %u, depth: %u\n",
                    vertices_.size(), faces_.size(), mem.size(), num_leaves, num_level);

@@ -229,6 +229,7 @@ public:
         auto r = ray;
         r.origin = (r.origin - pos) / ratio;
         auto res = kd_tree.singleRayStacklessIntersect(r);
+        //auto res = kd_tree.intersect(r);
         if (res.first >= INF)
             return {utils::Vector3(), INF, utils::Point2D()};
         auto hit_in_world = r.getVector(res.first) * ratio + pos;
