@@ -34,11 +34,11 @@ To render, use the following command
 
 ## Demo image
 ### Simple Ray Cast
-[!image](./demo/simple_ray_cast_demo.png)
+![image](./demo/simple_ray_cast_demo.png)
 ### Rotary Bezier Curve Demo
-[!image](./demo/pt_50k_bezier_demo_720p.png)
+![image](./demo/pt_50k_bezier_demo_720p.png)
 ### Final GPU Demo
-[!image](./final_720p.png)
+![image](./demo/final_720p.png)
 
 For more details, refer to the `demo` directory.
 
