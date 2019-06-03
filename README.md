@@ -37,6 +37,11 @@ To render, use the following command
 ![image](./demo/simple_ray_cast_demo.png)
 ### Rotary Bezier Curve Demo
 ![image](./demo/pt_50k_bezier_demo_720p.png)
+### PT and SPPM Demo
+#### PT
+![image](./demo/pt.png)
+#### SPPM
+![image](./demo/sppm.png)
 ### Final GPU Demo
 ![image](./demo/final_720p.png)
 
