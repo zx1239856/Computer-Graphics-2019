@@ -1,4 +1,4 @@
-# Photo Realistic Rendering - 2019 Computational Graphics
+# Photo Realistic Rendering - 2019 Computer Graphics
 
 ## Basic Functions
 + Multiple parametric objects supported, i.e. plane, sphere, cube and rotary bezier curve 
